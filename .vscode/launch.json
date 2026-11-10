@@ -1,0 +1,75 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Expo (Android)",
+      "type": "expo",
+      "request": "launch",
+      "platform": "android",
+      "mode": "development",
+      "skipProjectValidation": true
+    },
+    {
+      "name": "Debug Expo (iOS)",
+      "type": "expo",
+      "request": "launch",
+      "platform": "ios",
+      "mode": "development",
+      "skipProjectValidation": true
+    },
+    {
+      "name": "Debug Expo (Web)",
+      "type": "expo",
+      "request": "launch",
+      "platform": "web",
+      "mode": "development",
+      "skipProjectValidation": true
+    },
+    {
+      "name": "Attach to Expo (Android)",
+      "type": "expo",
+      "request": "attach",
+      "platform": "android",
+      "mode": "development"
+    },
+    {
+      "name": "Attach to Expo (iOS)",
+      "type": "expo",
+      "request": "attach",
+      "platform": "ios",
+      "mode": "development"
+    },
+    {
+      "name": "Debug Jest Tests",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/.bin/jest",
+      "args": ["--runInBand", "--no-coverage"],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Debug Current Jest Test",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/.bin/jest",
+      "args": ["--runInBand", "--no-coverage", "${file}"],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack Debug (Android + Functions)",
+      "configurations": ["Debug Expo (Android)", "Debug Firebase Functions"],
+      "stopAll": true
+    },
+    {
+      "name": "Full Stack Debug (iOS + Functions)",
+      "configurations": ["Debug Expo (iOS)", "Debug Firebase Functions"],
+      "stopAll": true
+    }
+  ]
+}

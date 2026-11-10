@@ -1,0 +1,24 @@
+{
+  "recommendations": [
+    "expo.vscode-expo-tools",
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "bradlc.vscode-tailwindcss",
+    "formulahendry.auto-rename-tag",
+    "christian-kohler.path-intellisense",
+    "usernamehw.errorlens",
+    "streetsidesoftware.code-spell-checker",
+    "ms-vscode.vscode-typescript-next",
+    "dsznajder.es7-react-js-snippets",
+    "infinitewhy.vscode-react-native-stylesheet-intellisense",
+    "msjsdiag.vscode-react-native",
+    "firebase.firebase-vscode",
+    "googlecloudtools.cloudcode",
+    "redhat.vscode-yaml",
+    "tamasfe.even-better-toml",
+    "editorconfig.editorconfig"
+  ],
+  "unwantedRecommendations": [
+    "ms-vscode.vscode-typescript-next"
+  ]
+}

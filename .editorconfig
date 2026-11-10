@@ -1,0 +1,58 @@
+# =============================================================================
+# COMMUNITY EVENTS APP - EDITORCONFIG
+# =============================================================================
+# Editor configuration for consistent coding styles
+# https://editorconfig.org
+
+root = true
+
+# All files
+[*]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+max_line_length = 100
+
+# TypeScript / JavaScript / React
+[*.{ts,tsx,js,jsx}]
+indent_size = 2
+quote_type = single
+trailing_comma = es5
+semicolons = true
+bracket_spacing = true
+arrow_parens = always
+print_width = 100
+tab_width = 2
+use_tabs = false
+
+# JSON
+[*.json]
+indent_size = 2
+
+# YAML
+[*.{yaml,yml}]
+indent_size = 2
+
+# Markdown
+[*.md]
+trim_trailing_whitespace = false
+max_line_length = 0
+
+# Configuration files
+[*.{toml,ini,conf,config}]
+indent_size = 2
+
+# Python
+[*.py]
+indent_size = 4
+
+# Shell
+[*.sh]
+indent_size = 2
+
+# Ignore patterns
+[*.{min.js,min.css,bundle.js,bundle.css}]
+indent_size = 2

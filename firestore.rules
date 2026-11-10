@@ -1,0 +1,303 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // =========================================================================
+    // HELPER FUNCTIONS
+    // =========================================================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isModerator() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'moderator'];
+    }
+
+    function userData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isValidEvent(eventData) {
+      return eventData.keys().hasAll(['title', 'description', 'startDate', 'endDate', 'location', 'organizerId', 'category', 'visibility'])
+        && eventData.title is string
+        && eventData.title.size() <= 200
+        && eventData.description is string
+        && eventData.description.size() <= 5000
+        && eventData.startDate is timestamp
+        && eventData.endDate is timestamp
+        && eventData.startDate < eventData.endDate
+        && eventData.location is map
+        && eventData.organizerId is string
+        && eventData.category is string
+        && eventData.visibility in ['public', 'private', 'unlisted'];
+    }
+
+    function isValidUserProfile(profileData) {
+      return profileData.keys().hasAll(['displayName', 'email', 'createdAt'])
+        && profileData.displayName is string
+        && profileData.displayName.size() <= 50
+        && profileData.email is string
+        && profileData.email.matches('^[^@]+@[^@]+\\.[^@]+$')
+        && profileData.createdAt is timestamp;
+    }
+
+    // =========================================================================
+    // USERS COLLECTION
+    // =========================================================================
+    match /users/{userId} {
+      // Users can read their own profile and public profiles
+      allow read: if isSignedIn() && (isOwner(userId) || resource.data.visibility == 'public');
+
+      // Users can create their own profile on signup
+      allow create: if isSignedIn() && isOwner(userId) && isValidUserProfile(request.resource.data);
+
+      // Users can update their own profile
+      allow update: if isSignedIn() && isOwner(userId) && isValidUserProfile(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'bio', 'avatarUrl', 'location', 'notificationSettings', 'privacySettings', 'updatedAt']);
+
+      // Admins can delete users
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // EVENTS COLLECTION
+    // =========================================================================
+    match /events/{eventId} {
+      // Public events readable by anyone, private events only by attendees/organizer
+      allow read: if resource.data.visibility == 'public'
+        || (isSignedIn() && (resource.data.organizerId == request.auth.uid
+          || request.auth.uid in resource.data.attendeeIds
+          || request.auth.uid in resource.data.coOrganizerIds));
+
+      // Authenticated users can create events
+      allow create: if isSignedIn() && isValidEvent(request.resource.data)
+        && request.resource.data.organizerId == request.auth.uid
+        && request.resource.data.attendeeIds == [request.auth.uid]
+        && request.resource.data.coOrganizerIds == []
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      // Organizer and co-organizers can update events
+      allow update: if isSignedIn() && (resource.data.organizerId == request.auth.uid
+        || request.auth.uid in resource.data.coOrganizerIds)
+        && isValidEvent(request.resource.data)
+        && request.resource.data.organizerId == resource.data.organizerId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time;
+
+      // Only organizer can delete events
+      allow delete: if isSignedIn() && resource.data.organizerId == request.auth.uid;
+    }
+
+    // =========================================================================
+    // EVENT ATTENDEES SUBCOLLECTION
+    // =========================================================================
+    match /events/{eventId}/attendees/{attendeeId} {
+      // Event attendees and organizer can read attendee list
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid
+        || get(/databases/$(database)/documents/events/$(eventId)).data.organizerId == request.auth.uid
+        || request.auth.uid in get(/databases/$(database)/documents/events/$(eventId)).data.coOrganizerIds);
+
+      // Users can RSVP to events (create their own attendee record)
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status in ['going', 'interested', 'not_going']
+        && request.resource.data.respondedAt == request.time;
+
+      // Users can update their own RSVP
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid
+        && request.resource.data.status in ['going', 'interested', 'not_going']
+        && request.resource.data.respondedAt == request.time;
+
+      // Organizer can remove attendees
+      allow delete: if isSignedIn() && get(/databases/$(database)/documents/events/$(eventId)).data.organizerId == request.auth.uid;
+    }
+
+    // =========================================================================
+    // EVENT COMMENTS SUBCOLLECTION
+    // =========================================================================
+    match /events/{eventId}/comments/{commentId} {
+      // Anyone who can read the event can read comments
+      allow read: if isSignedIn() && (
+        get(/databases/$(database)/documents/events/$(eventId)).data.visibility == 'public'
+        || get(/databases/$(database)/documents/events/$(eventId)).data.organizerId == request.auth.uid
+        || request.auth.uid in get(/databases/$(database)/documents/events/$(eventId)).data.attendeeIds
+        || request.auth.uid in get(/databases/$(database)/documents/events/$(eventId)).data.coOrganizerIds
+      );
+
+      // Event attendees can create comments
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid
+        && request.resource.data.content is string
+        && request.resource.data.content.size() <= 2000
+        && request.resource.data.createdAt == request.time
+        && (request.auth.uid in get(/databases/$(database)/documents/events/$(eventId)).data.attendeeIds
+          || request.auth.uid in get(/databases/$(database)/documents/events/$(eventId)).data.coOrganizerIds
+          || get(/databases/$(database)/documents/events/$(eventId)).data.organizerId == request.auth.uid);
+
+      // Users can update their own comments
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid
+        && request.resource.data.content is string
+        && request.resource.data.content.size() <= 2000
+        && request.resource.data.updatedAt == request.time;
+
+      // Users can delete their own comments, organizers can delete any
+      allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid
+        || get(/databases/$(database)/documents/events/$(eventId)).data.organizerId == request.auth.uid);
+    }
+
+    // =========================================================================
+    // CATEGORIES COLLECTION
+    // =========================================================================
+    match /categories/{categoryId} {
+      // Anyone can read categories
+      allow read: if true;
+
+      // Only admins can manage categories
+      allow create, update, delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // VENUES COLLECTION
+    // =========================================================================
+    match /venues/{venueId} {
+      // Anyone can read venues
+      allow read: if true;
+
+      // Authenticated users can create venues
+      allow create: if isSignedIn() && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+
+      // Creator and admins can update venues
+      allow update: if isSignedIn() && (resource.data.createdBy == request.auth.uid || isAdmin())
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time;
+
+      // Only admins can delete venues
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // NOTIFICATIONS COLLECTION
+    // =========================================================================
+    match /notifications/{notificationId} {
+      // Users can only read their own notifications
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+      // System/functions can create notifications
+      allow create: if false; // Only via Cloud Functions
+
+      // Users can mark their own notifications as read
+      allow update: if isSignedIn() && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'readAt']);
+
+      // Users can delete their own notifications
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // =========================================================================
+    // REPORTS COLLECTION (for content moderation)
+    // =========================================================================
+    match /reports/{reportId} {
+      // Only moderators and admins can read reports
+      allow read: if isModerator();
+
+      // Users can create reports
+      allow create: if isSignedIn() && request.resource.data.reporterId == request.auth.uid
+        && request.resource.data.targetType in ['event', 'comment', 'user', 'venue']
+        && request.resource.data.targetId is string
+        && request.resource.data.reason is string
+        && request.resource.data.reason.size() <= 500
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.status == 'pending';
+
+      // Moderators can update report status
+      allow update: if isModerator()
+        && request.resource.data.status in ['pending', 'reviewing', 'resolved', 'dismissed']
+        && request.resource.data.resolvedAt == request.time
+        && request.resource.data.resolvedBy == request.auth.uid;
+
+      // Only admins can delete reports
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // SETTINGS COLLECTION (app-wide settings)
+    // =========================================================================
+    match /settings/{settingId} {
+      // Anyone can read public settings
+      allow read: if resource.data.isPublic == true || isAdmin();
+
+      // Only admins can manage settings
+      allow create, update, delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // ANALYTICS COLLECTION (write-only from client, read by admins)
+    // =========================================================================
+    match /analytics/{eventId} {
+      // Clients can write analytics events
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.eventName is string
+        && request.resource.data.eventName.size() <= 100
+        && request.resource.data.parameters is map
+        && request.resource.data.timestamp == request.time;
+
+      // Only admins can read analytics
+      allow read: if isAdmin();
+
+      // No updates or deletes
+      allow update, delete: if false;
+    }
+
+    // =========================================================================
+    // FRIENDS/SOCIAL COLLECTION
+    // =========================================================================
+    match /users/{userId}/friends/{friendId} {
+      // Users can read their own friends list
+      allow read: if isSignedIn() && isOwner(userId);
+
+      // Users can send friend requests (create)
+      allow create: if isSignedIn() && isOwner(userId)
+        && request.resource.data.friendId == friendId
+        && request.resource.data.status == 'pending'
+        && request.resource.data.requestedAt == request.time
+        && friendId != userId;
+
+      // Users can accept/decline friend requests (update)
+      allow update: if isSignedIn() && isOwner(userId)
+        && request.resource.data.status in ['accepted', 'declined', 'blocked']
+        && request.resource.data.respondedAt == request.time;
+
+      // Users can remove friends (delete)
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+
+    // =========================================================================
+    // SAVED EVENTS (user bookmarks)
+    // =========================================================================
+    match /users/{userId}/savedEvents/{eventId} {
+      // Users can read their own saved events
+      allow read: if isSignedIn() && isOwner(userId);
+
+      // Users can save/unsave events
+      allow create: if isSignedIn() && isOwner(userId)
+        && request.resource.data.savedAt == request.time;
+
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+
+    // =========================================================================
+    // DEFAULT DENY
+    // =========================================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

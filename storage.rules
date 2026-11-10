@@ -1,0 +1,122 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.role == 'admin';
+    }
+
+    function isValidImage() {
+      return request.resource.contentType.matches('image/.*')
+        && request.resource.size < 10 * 1024 * 1024; // 10MB max
+    }
+
+    function isValidEventCover() {
+      return isValidImage()
+        && request.resource.name.matches('.*\\.(jpg|jpeg|png|webp)$');
+    }
+
+    // =========================================================================
+    // EVENT COVERS
+    // =========================================================================
+    match /events/covers/{eventId}/{fileName} {
+      // Anyone can read event covers (public images)
+      allow read: if true;
+
+      // Event organizer and co-organizers can upload covers
+      allow write: if isSignedIn()
+        && (request.auth.uid == get(/databases/(default)/documents/events/{eventId}).data.organizerId
+            || request.auth.uid in get(/databases/(default)/documents/events/{eventId}).data.coOrganizerIds)
+        && isValidEventCover()
+        && fileName.matches('.*\\.(jpg|jpeg|png|webp)$');
+
+      // Only organizer can delete
+      allow delete: if isSignedIn()
+        && request.auth.uid == get(/databases/(default)/documents/events/{eventId}).data.organizerId;
+    }
+
+    // =========================================================================
+    // EVENT GALLERY
+    // =========================================================================
+    match /events/gallery/{eventId}/{fileName} {
+      // Anyone can read gallery images for public events
+      allow read: if get(/databases/(default)/documents/events/{eventId}).data.visibility == 'public'
+        || (isSignedIn() && (request.auth.uid == resource.metadata.uploadedBy
+            || request.auth.uid == get(/databases/(default)/documents/events/{eventId}).data.organizerId
+            || request.auth.uid in get(/databases/(default)/documents/events/{eventId}).data.coOrganizerIds
+            || request.auth.uid in get(/databases/(default)/documents/events/{eventId}).data.attendeeIds));
+
+      // Attendees and organizer can upload gallery images
+      allow write: if isSignedIn()
+        && (request.auth.uid == get(/databases/(default)/documents/events/{eventId}).data.organizerId
+            || request.auth.uid in get(/databases/(default)/documents/events/{eventId}).data.coOrganizerIds
+            || request.auth.uid in get(/databases/(default)/documents/events/{eventId}).data.attendeeIds)
+        && isValidImage()
+        && fileName.matches('.*\\.(jpg|jpeg|png|webp)$');
+
+      // Uploader and organizer can delete
+      allow delete: if isSignedIn()
+        && (request.auth.uid == resource.metadata.uploadedBy
+            || request.auth.uid == get(/databases/(default)/documents/events/{eventId}).data.organizerId);
+    }
+
+    // =========================================================================
+    // PROFILE AVATARS
+    // =========================================================================
+    match /users/avatars/{userId}/{fileName} {
+      // Anyone can read avatars
+      allow read: if true;
+
+      // Only the user can upload their own avatar
+      allow write: if isSignedIn()
+        && isOwner(userId)
+        && isValidImage()
+        && fileName.matches('.*\\.(jpg|jpeg|png|webp)$');
+
+      // Only the user can delete their avatar
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+
+    // =========================================================================
+    // VENUE PHOTOS
+    // =========================================================================
+    match /venues/photos/{venueId}/{fileName} {
+      // Anyone can read venue photos
+      allow read: if true;
+
+      // Venue creator and admins can upload photos
+      allow write: if isSignedIn()
+        && (request.auth.uid == get(/databases/(default)/documents/venues/{venueId}).data.createdBy
+            || isAdmin())
+        && isValidImage()
+        && fileName.matches('.*\\.(jpg|jpeg|png|webp)$');
+
+      // Only admins can delete
+      allow delete: if isAdmin();
+    }
+
+    // =========================================================================
+    // TEMP UPLOADS (for processing)
+    // =========================================================================
+    match /temp/{userId}/{fileName} {
+      // Only the user can access their temp uploads
+      allow read, write: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
+    }
+
+    // =========================================================================
+    // DEFAULT DENY
+    // =========================================================================
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
