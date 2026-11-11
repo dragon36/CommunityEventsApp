@@ -46,7 +46,7 @@ interface EventMarkerProps {
 
 function EventMarkerComponent({ event, selected, onPress }: EventMarkerProps) {
   const color = EVENT_TYPE_COLORS[event.type];
-  const iconName = EVENT_TYPE_ICONS[event.type];
+  const iconName = EVENT_TYPE_ICONS[event.type] as any;
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
@@ -113,7 +113,7 @@ function EventCallout({ event, onPress, onClose }: EventCalloutProps) {
         <View style={styles.calloutInfo}>
           <Text style={styles.calloutTitle}>{event.title}</Text>
           <Text style={styles.calloutType}>{event.type.replace('_', ' ')}</Text>
-          <Text style={styles.calloutLocation}>{event.location.name}</Text>
+          <Text style={styles.calloutLocation}>{event.location.venueName || event.location.address}</Text>
           <Text style={styles.calloutDate}>
             {new Date(event.startDate.toDate()).toLocaleDateString()} -{' '}
             {new Date(event.endDate.toDate()).toLocaleDateString()}
@@ -174,6 +174,7 @@ export function MapViewComponent({
         onPressMap({
           name: 'Selected Location',
           address: '',
+          placeId: '',
           coordinates: {
             latitude: event.nativeEvent.coordinate.latitude,
             longitude: event.nativeEvent.coordinate.longitude,

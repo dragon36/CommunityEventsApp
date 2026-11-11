@@ -89,7 +89,7 @@ export function EventTypeSelector({
                 ]}
               >
                 <Ionicons
-                  name={option.icon}
+                  name={option.icon as any}
                   size={22}
                   color={isSelected ? '#FFFFFF' : option.color}
                 />

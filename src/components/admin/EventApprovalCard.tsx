@@ -51,7 +51,7 @@ export function EventApprovalCard({
     <Card style={styles.card} elevation={2}>
       <View style={styles.header}>
         <View style={[{ backgroundColor: color }, styles.typeBadge]}>
-          <Ionicons name={iconName} size={18} color="#FFFFFF" />
+          <Ionicons name={iconName as any} size={18} color="#FFFFFF" />
         </View>
         <View style={styles.headerInfo}>
           <Text style={styles.title}>{event.title}</Text>
@@ -60,7 +60,7 @@ export function EventApprovalCard({
           </Text>
         </View>
         <TouchableOpacity onPress={onViewDetails} style={styles.detailsButton}>
-          <Ionicons name="eye-outline" size={22} color="#666666" />
+          <Ionicons name="eye-outline" as any size={22} color="#666666" />
         </TouchableOpacity>
       </View>
 
@@ -68,23 +68,23 @@ export function EventApprovalCard({
         <Text style={styles.description}>{event.description}</Text>
 
         <View style={styles.infoRow}>
-          <Ionicons name="location-outline" size={16} color="#999999" />
-          <Text style={styles.infoText}>{event.location.name}</Text>
+          <Ionicons name="location-outline" as any size={16} color="#999999" />
+          <Text style={styles.infoText}>{event.location.venueName || event.location.address}</Text>
         </View>
 
         <View style={styles.infoRow}>
-          <Ionicons name="calendar-outline" size={16} color="#999999" />
+          <Ionicons name="calendar-outline" as any size={16} color="#999999" />
           <Text style={styles.infoText}>
             {formatDate(event.startDate.toDate())} - {formatDate(event.endDate.toDate())}
           </Text>
         </View>
 
-        {event.images.length > 0 && (
+        {event.images && event.images.length > 0 && (
           <View style={styles.images}>
             {event.images.slice(0, 3).map((img, index) => (
               <Image
                 key={index}
-                source={{ uri: img.url }}
+                source={{ uri: img }}
                 style={styles.image}
                 resizeMode="cover"
               />

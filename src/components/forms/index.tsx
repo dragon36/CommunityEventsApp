@@ -3,7 +3,7 @@
 // =============================================================================
 
 import React, { forwardRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Switch, TouchableOpacity, TextInput } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { Input, Button } from '@/components/ui';
 import { Spacing, BorderRadius, Typography } from '@/context/ThemeContext';
@@ -81,8 +81,8 @@ export const Select: React.FC<SelectProps> = ({
       {label && <Text style={[styles.label, { color: colors.textPrimary }]}>{label}</Text>}
       <View style={[
         styles.selectWrapper,
-        error && styles.selectWrapperError,
-        disabled && styles.selectWrapperDisabled,
+        error ? styles.selectWrapperError : null,
+        disabled ? styles.selectWrapperDisabled : null,
         { borderColor: error ? colors.error : colors.border },
       ]}>
         <Text style={[
@@ -131,13 +131,13 @@ export const Checkbox: React.FC<CheckboxProps> = ({
     >
       <View style={[
         styles.checkboxBox,
-        value && styles.checkboxChecked,
-        disabled && styles.checkboxDisabled,
+        value ? styles.checkboxChecked : null,
+        disabled ? styles.checkboxDisabled : null,
         { backgroundColor: value ? colors.primary : 'transparent', borderColor: value ? colors.primary : colors.border },
       ]}>
         {value && <Text style={styles.checkboxCheck}>✓</Text>}
       </View>
-      <Text style={[styles.checkboxLabel, { color: colors.textPrimary }, disabled && styles.checkboxLabelDisabled, labelStyle]}>
+      <Text style={[styles.checkboxLabel, { color: colors.textPrimary }, disabled ? styles.checkboxLabelDisabled : null, labelStyle]}>
         {label}
       </Text>
     </TouchableOpacity>
@@ -218,11 +218,11 @@ export const Textarea: React.FC<TextareaProps> = ({
       {label && <Text style={[styles.label, { color: colors.textPrimary }]}>{label}</Text>}
       <View style={[
         styles.textareaWrapper,
-        error && styles.textareaWrapperError,
+        error ? styles.textareaWrapperError : null,
         { borderColor: error ? colors.error : colors.border },
       ]}>
         <TextInput
-          style={[styles.textarea, { color: colors.textPrimary, minHeight }, disabled && styles.textareaDisabled]}
+          style={[styles.textarea, { color: colors.textPrimary, minHeight }, disabled ? styles.textareaDisabled : null]}
           value={value}
           onChangeText={disabled ? undefined : onChangeText}
           placeholder={placeholder}
@@ -286,8 +286,8 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
       <TouchableOpacity
         style={[
           styles.datePickerWrapper,
-          error && styles.datePickerWrapperError,
-          disabled && styles.datePickerWrapperDisabled,
+          error ? styles.datePickerWrapperError : null,
+          disabled ? styles.datePickerWrapperDisabled : null,
           { borderColor: error ? colors.error : colors.border },
         ]}
         onPress={() => !disabled && onChange(value)} // Would open date picker modal
@@ -296,7 +296,7 @@ export const DatePickerField: React.FC<DatePickerFieldProps> = ({
         <Text style={[
           styles.datePickerText,
           value ? { color: colors.textPrimary } : { color: colors.textTertiary },
-          disabled && { color: colors.textTertiary },
+          disabled ? { color: colors.textTertiary } : null,
         ]}>
           {value ? formatDate(value) : 'Select date'}
         </Text>

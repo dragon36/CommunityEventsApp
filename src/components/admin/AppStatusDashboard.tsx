@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, RefreshControl, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, RefreshControl, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/components/ui/Card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -61,14 +61,14 @@ export function AppStatusDashboard({
       <Card style={styles.statusCard}>
         <View style={styles.statusHeader}>
           <View style={[{ backgroundColor: getStatusColor(health?.status || 'operational') }, styles.statusIndicator]}>
-            <Ionicons name={getStatusIcon(health?.status || 'operational')} size={24} color="#FFFFFF" />
+            <Ionicons name={getStatusIcon(health?.status || 'operational') as any} size={24} color="#FFFFFF" />
           </View>
           <View style={styles.statusInfo}>
             <Text style={[
               styles.statusTitle,
               { color: getStatusColor(health?.status || 'operational') },
             ]}>
-              System {health?.status?.charAt(0).toUpperCase() + health?.status?.slice(1) || 'Healthy'}
+              System {health?.status ? health.status.charAt(0).toUpperCase() + health.status.slice(1) : 'Healthy'}
             </Text>
             <Text style={styles.statusSubtitle}>
               Last checked: {lastChecked ? lastChecked.toLocaleString() : 'Unknown'}
@@ -89,7 +89,7 @@ export function AppStatusDashboard({
           <Card key={service.key} style={styles.serviceCard}>
             <View style={styles.serviceHeader}>
               <View style={[{ backgroundColor: getStatusColor(service.status) }, styles.serviceIndicator]}>
-                <Ionicons name={getStatusIcon(service.status)} size={18} color="#FFFFFF" />
+                <Ionicons name={getStatusIcon(service.status) as any} size={18} color="#FFFFFF" />
               </View>
               <Text style={styles.serviceTitle}>{service.label}</Text>
             </View>
@@ -119,7 +119,7 @@ export function AppStatusDashboard({
         ].map((stat, index) => (
           <Card key={index} style={styles.statCard}>
             <View style={styles.statIconContainer}>
-              <Ionicons name={stat.icon} size={24} color={stat.color} />
+              <Ionicons name={stat.icon as any} size={24} color={stat.color} />
             </View>
             <Text style={styles.statValue}>{stat.value}</Text>
             <Text style={styles.statLabel}>{stat.label}</Text>
@@ -131,19 +131,19 @@ export function AppStatusDashboard({
       <Text style={styles.sectionTitle}>Quick Actions</Text>
       <View style={styles.actionsGrid}>
         <TouchableOpacity style={styles.actionCard}>
-          <Ionicons name="refresh-outline" size={24} color="#2EC4B6" />
+          <Ionicons name="refresh-outline" as any size={24} color="#2EC4B6" />
           <Text style={styles.actionLabel}>Refresh Health</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionCard}>
-          <Ionicons name="analytics-outline" size={24} color="#FF6B35" />
+          <Ionicons name="analytics-outline" as any size={24} color="#FF6B35" />
           <Text style={styles.actionLabel}>View Analytics</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionCard}>
-          <Ionicons name="settings-outline" size={24} color="#FF9F1C" />
+          <Ionicons name="settings-outline" as any size={24} color="#FF9F1C" />
           <Text style={styles.actionLabel}>App Settings</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionCard}>
-          <Ionicons name="shield-outline" size={24} color="#2EC4B6" />
+          <Ionicons name="shield-outline" as any size={24} color="#2EC4B6" />
           <Text style={styles.actionLabel}>Security Audit</Text>
         </TouchableOpacity>
       </View>

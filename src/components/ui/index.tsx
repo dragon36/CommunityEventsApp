@@ -18,6 +18,130 @@ import { useTheme } from '@/context/ThemeContext';
 import { Spacing, BorderRadius, Shadows, Typography } from '@/context/ThemeContext';
 
 // -----------------------------------------------------------------------------
+// STYLES (moved to top to avoid "used before declaration" errors)
+// -----------------------------------------------------------------------------
+const styles = StyleSheet.create({
+  // Button
+  button: {
+    borderRadius: BorderRadius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonSm: { paddingHorizontal: 12, paddingVertical: 8, minHeight: 36 },
+  buttonMd: { paddingHorizontal: 20, paddingVertical: 12, minHeight: 48 },
+  buttonLg: { paddingHorizontal: 24, paddingVertical: 16, minHeight: 56 },
+  fullWidth: { width: '100%' },
+  disabled: { opacity: 0.5 },
+  text: { fontWeight: '600', textAlign: 'center' },
+  textSm: { fontSize: 13 },
+  textMd: { fontSize: 15 },
+  textLg: { fontSize: 17 },
+  spinner: { marginHorizontal: 8 },
+  iconLeft: { marginRight: 8 },
+  iconRight: { marginLeft: 8 },
+
+  // Button Variants
+  buttonPrimary: { backgroundColor: '#4285F4' },
+  buttonSecondary: { backgroundColor: '#34A853' },
+  buttonOutline: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#4285F4' },
+  buttonGhost: { backgroundColor: 'transparent' },
+  buttonDanger: { backgroundColor: '#EA4335' },
+
+  textPrimary: { color: '#FFFFFF' },
+  textSecondary: { color: '#FFFFFF' },
+  textOutline: { color: '#4285F4' },
+  textGhost: { color: '#4285F4' },
+  textDanger: { color: '#FFFFFF' },
+
+  // Input
+  inputContainer: { width: '100%' },
+  label: { fontSize: 14, fontWeight: '500', marginBottom: 8 },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    backgroundColor: '#FFFFFF',
+  },
+  inputWrapperError: { borderWidth: 2 },
+  input: { flex: 1, height: 52, paddingHorizontal: 16, fontSize: 16 },
+  inputIconLeft: { paddingLeft: 16 },
+  inputIconRight: { paddingRight: 16 },
+  errorText: { marginTop: 6, fontSize: 12 },
+  helperText: { marginTop: 6, fontSize: 12 },
+
+  // Card
+  card: {
+    borderRadius: BorderRadius.lg,
+    overflow: 'hidden',
+  },
+
+  // Avatar
+  avatar: {
+    borderRadius: 9999,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarImage: { borderRadius: 9999 },
+  avatarPlaceholder: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 9999,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: { fontWeight: '600' },
+
+  // Badge
+  badge: { flexDirection: 'row', alignItems: 'center' },
+
+  // Divider
+  divider: { height: 1, marginVertical: 8 },
+  dividerWithLabel: { flexDirection: 'row', alignItems: 'center', marginVertical: 16 },
+  dividerLine: { flex: 1, height: 1 },
+  dividerLabel: { paddingHorizontal: 16, fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 },
+
+  // Icon Button
+  iconButton: {
+    borderRadius: 9999,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconButtonDisabled: { opacity: 0.4 },
+});
+
+// Style lookup objects (defined after styles)
+const sizeStyles = {
+  sm: styles.buttonSm,
+  md: styles.buttonMd,
+  lg: styles.buttonLg,
+};
+
+const sizeTextStyles = {
+  sm: styles.textSm,
+  md: styles.textMd,
+  lg: styles.textLg,
+};
+
+const variantStyles = {
+  primary: styles.buttonPrimary,
+  secondary: styles.buttonSecondary,
+  outline: styles.buttonOutline,
+  ghost: styles.buttonGhost,
+  danger: styles.buttonDanger,
+};
+
+const variantTextStyles = {
+  primary: styles.textPrimary,
+  secondary: styles.textSecondary,
+  outline: styles.textOutline,
+  ghost: styles.textGhost,
+  danger: styles.textDanger,
+};
+
+// -----------------------------------------------------------------------------
 // BUTTON
 // -----------------------------------------------------------------------------
 export interface ButtonProps extends React.ComponentPropsWithoutRef<typeof TouchableOpacity> {
@@ -102,34 +226,6 @@ export const Button = forwardRef<TouchableOpacity, ButtonProps>(
 
 Button.displayName = 'Button';
 
-const sizeStyles = {
-  sm: styles.buttonSm,
-  md: styles.buttonMd,
-  lg: styles.buttonLg,
-};
-
-const sizeTextStyles = {
-  sm: styles.textSm,
-  md: styles.textMd,
-  lg: styles.textLg,
-};
-
-const variantStyles = {
-  primary: styles.buttonPrimary,
-  secondary: styles.buttonSecondary,
-  outline: styles.buttonOutline,
-  ghost: styles.buttonGhost,
-  danger: styles.buttonDanger,
-};
-
-const variantTextStyles = {
-  primary: styles.textPrimary,
-  secondary: styles.textSecondary,
-  outline: styles.textOutline,
-  ghost: styles.textGhost,
-  danger: styles.textDanger,
-};
-
 // -----------------------------------------------------------------------------
 // INPUT
 // -----------------------------------------------------------------------------
@@ -168,11 +264,11 @@ export const Input = forwardRef<TextInput, InputProps>(
         <View
           style={[
             styles.inputWrapper,
-            error && styles.inputWrapperError,
+            error ? styles.inputWrapperError : null,
             { borderColor: error ? colors.error : colors.border },
           ]}
         >
-          {leftIcon && <View style={styles.iconLeft}>{leftIcon}</View>}
+          {leftIcon && <View style={styles.inputIconLeft}>{leftIcon}</View>}
           <TextInput
             ref={ref}
             style={[
@@ -183,7 +279,7 @@ export const Input = forwardRef<TextInput, InputProps>(
             ]}
             {...props}
           />
-          {rightIcon && <View style={styles.iconRight}>{rightIcon}</View>}
+          {rightIcon && <View style={styles.inputIconRight}>{rightIcon}</View>}
         </View>
         {error && <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>}
         {helperText && !error && <Text style={[styles.helperText, { color: colors.textTertiary }]}>{helperText}</Text>}
@@ -216,7 +312,16 @@ export const Card: React.FC<CardProps> = ({
 
   const shadowStyle = elevation === 'none' ? shadows.none : shadows[elevation];
 
-  const Component = onPress ? Pressable : View;
+  const isPressable = !!onPress;
+  const Component = isPressable ? Pressable : View;
+
+  const pressableProps = isPressable
+    ? {
+        onPress,
+        android_ripple: { color: colors.primaryLight },
+        activeOpacity,
+      }
+    : {};
 
   return (
     <Component
@@ -226,9 +331,7 @@ export const Card: React.FC<CardProps> = ({
         shadowStyle,
         style,
       ]}
-      onPress={onPress}
-      android_ripple={{ color: colors.primaryLight }}
-      activeOpacity={activeOpacity}
+      {...pressableProps}
     >
       {children}
     </Component>
@@ -414,7 +517,7 @@ export const IconButton: React.FC<IconButtonProps> = ({
         styles.iconButton,
         { width: diameter, height: diameter },
         variantStyles[variant],
-        disabled && styles.disabled,
+        disabled && styles.iconButtonDisabled,
         style,
       ]}
       onPress={disabled ? undefined : onPress}
@@ -427,101 +530,6 @@ export const IconButton: React.FC<IconButtonProps> = ({
     </TouchableOpacity>
   );
 };
-
-// -----------------------------------------------------------------------------
-// STYLES
-// -----------------------------------------------------------------------------
-const styles = StyleSheet.create({
-  // Button
-  button: {
-    borderRadius: BorderRadius.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonSm: { paddingHorizontal: 12, paddingVertical: 8, minHeight: 36 },
-  buttonMd: { paddingHorizontal: 20, paddingVertical: 12, minHeight: 48 },
-  buttonLg: { paddingHorizontal: 24, paddingVertical: 16, minHeight: 56 },
-  fullWidth: { width: '100%' },
-  disabled: { opacity: 0.5 },
-  text: { fontWeight: '600', textAlign: 'center' },
-  textSm: { fontSize: 13 },
-  textMd: { fontSize: 15 },
-  textLg: { fontSize: 17 },
-  spinner: { marginHorizontal: 8 },
-  iconLeft: { marginRight: 8 },
-  iconRight: { marginLeft: 8 },
-
-  // Button Variants
-  buttonPrimary: { backgroundColor: '#4285F4' },
-  buttonSecondary: { backgroundColor: '#34A853' },
-  buttonOutline: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#4285F4' },
-  buttonGhost: { backgroundColor: 'transparent' },
-  buttonDanger: { backgroundColor: '#EA4335' },
-
-  textPrimary: { color: '#FFFFFF' },
-  textSecondary: { color: '#FFFFFF' },
-  textOutline: { color: '#4285F4' },
-  textGhost: { color: '#4285F4' },
-  textDanger: { color: '#FFFFFF' },
-
-  // Input
-  inputContainer: { width: '100%' },
-  label: { fontSize: 14, fontWeight: '500', marginBottom: 8 },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: BorderRadius.md,
-    backgroundColor: '#FFFFFF',
-  },
-  inputWrapperError: { borderWidth: 2 },
-  input: { flex: 1, height: 52, paddingHorizontal: 16, fontSize: 16 },
-  iconLeft: { paddingLeft: 16 },
-  iconRight: { paddingRight: 16 },
-  errorText: { marginTop: 6, fontSize: 12 },
-  helperText: { marginTop: 6, fontSize: 12 },
-
-  // Card
-  card: {
-    borderRadius: BorderRadius.lg,
-    overflow: 'hidden',
-  },
-
-  // Avatar
-  avatar: {
-    borderRadius: 9999,
-    overflow: 'hidden',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarImage: { borderRadius: 9999 },
-  avatarPlaceholder: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 9999,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: { fontWeight: '600' },
-
-  // Badge
-  badge: { flexDirection: 'row', alignItems: 'center' },
-
-  // Divider
-  divider: { height: 1, marginVertical: 8 },
-  dividerWithLabel: { flexDirection: 'row', alignItems: 'center', marginVertical: 16 },
-  dividerLine: { flex: 1, height: 1 },
-  dividerLabel: { paddingHorizontal: 16, fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 },
-
-  // Icon Button
-  iconButton: {
-    borderRadius: 9999,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconButtonDisabled: { opacity: 0.4 },
-});
 
 export default {
   Button,

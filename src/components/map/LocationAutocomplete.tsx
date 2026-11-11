@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, TextInput, FlatList, StyleSheet, TouchableOpacity, Text, ViewStyle, TextStyle, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getPlaceAutocomplete, getPlaceDetails, createDebouncedAutocomplete, type LocationSuggestion, type LocationData } from '@/services/maps/googlePlaces';
+import { getPlaceAutocomplete, getPlaceDetails, createDebouncedAutocomplete } from '@/services/maps/googlePlaces';
+import type { LocationSuggestion, LocationData } from '@/types';
 
 // ============================================
 // Types
@@ -173,7 +174,7 @@ export function LocationAutocomplete({
           placeholderTextColor="#999999"
           style={[styles.input, inputStyle]}
           autoFocus={autoFocus}
-          disabled={disabled}
+          editable={!disabled}
           autoCapitalize="words"
           autoCorrect={false}
           spellCheck={false}
@@ -187,15 +188,16 @@ export function LocationAutocomplete({
 
       {showSuggestions && (
         <View style={[styles.suggestionsContainer, listStyle]}>
-          <FlatList
-            ref={listRef}
-            data={suggestions}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.placeId}
-            maxHeight={300}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.suggestionsContent}
-          />
+          <View style={{ maxHeight: 300 }}>
+            <FlatList
+              ref={listRef}
+              data={suggestions}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.placeId}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.suggestionsContent}
+            />
+          </View>
         </View>
       )}
     </View>

@@ -25,7 +25,7 @@ export function UserLocationButton({ style, onPress }: UserLocationButtonProps) 
       accessibilityLabel="Center map on my location"
     >
       <Ionicons
-        name={hasPermission ? 'location-outline' : 'location-off-outline'}
+        name={(hasPermission ? 'location-outline' : 'location-off-outline') as any}
         size={24}
         color={hasPermission ? '#2EC4B6' : '#999999'}
       />

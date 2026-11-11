@@ -64,7 +64,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       associatedDomains: ['applinks:communityevents.app'],
       googleServicesFile: isProduction ? './GoogleService-Info.plist' : './GoogleService-Info-dev.plist',
       config: {
-        googleMapsApiKey: process.env.EXPO_IOS_GOOGLE_MAPS_API_KEY
+        googleMapsApiKey: process.env['EXPO_IOS_GOOGLE_MAPS_API_KEY']
       }
     },
     android: {
@@ -90,7 +90,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       googleServicesFile: isProduction ? './google-services.json' : './google-services-dev.json',
       config: {
         googleMaps: {
-          apiKey: process.env.EXPO_ANDROID_GOOGLE_MAPS_API_KEY
+          apiKey: process.env['EXPO_ANDROID_GOOGLE_MAPS_API_KEY']
         }
       },
       intentFilters: [
@@ -154,36 +154,28 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         '@react-native-firebase/app',
         {
-          appId: process.env.EXPO_FIREBASE_APP_ID,
-          apiKey: process.env.EXPO_FIREBASE_API_KEY,
-          projectId: process.env.EXPO_FIREBASE_PROJECT_ID
+          appId: process.env['EXPO_FIREBASE_APP_ID'],
+          apiKey: process.env['EXPO_FIREBASE_API_KEY'],
+          projectId: process.env['EXPO_FIREBASE_PROJECT_ID']
         }
       ],
       [
         '@react-native-firebase/auth',
         {
-          appleTeamId: process.env.APPLE_TEAM_ID
+          appleTeamId: process.env['APPLE_TEAM_ID']
         }
       ],
       [
         '@react-native-firebase/messaging',
         {
           ios: {
-            apnsKeyId: process.env.APNS_KEY_ID,
-            apnsTeamId: process.env.APNS_TEAM_ID,
-            apnsAuthKey: process.env.APNS_AUTH_KEY
+            apnsKeyId: process.env['APNS_KEY_ID'],
+            apnsTeamId: process.env['APNS_TEAM_ID'],
+            apnsAuthKey: process.env['APNS_AUTH_KEY']
           }
         }
       ],
-      [
-        'react-native-google-places-autocomplete',
-        {
-          enableGooglePlacesAPI: true,
-          iosApiKey: process.env.EXPO_IOS_GOOGLE_PLACES_API_KEY,
-          androidApiKey: process.env.EXPO_ANDROID_GOOGLE_PLACES_API_KEY
-        }
-      ],
-      [
+            [
         'expo-build-properties',
         {
           ios: {
@@ -225,31 +217,31 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     extra: {
       eas: {
-        projectId: process.env.EXPO_PROJECT_ID
+        projectId: process.env['EXPO_PROJECT_ID']
       },
       firebase: {
-        apiKey: process.env.EXPO_FIREBASE_API_KEY,
-        authDomain: process.env.EXPO_FIREBASE_AUTH_DOMAIN,
-        projectId: process.env.EXPO_FIREBASE_PROJECT_ID,
-        storageBucket: process.env.EXPO_FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: process.env.EXPO_FIREBASE_MESSAGING_SENDER_ID,
-        appId: process.env.EXPO_FIREBASE_APP_ID,
-        measurementId: process.env.EXPO_FIREBASE_MEASUREMENT_ID
+        apiKey: process.env['EXPO_FIREBASE_API_KEY'],
+        authDomain: process.env['EXPO_FIREBASE_AUTH_DOMAIN'],
+        projectId: process.env['EXPO_FIREBASE_PROJECT_ID'],
+        storageBucket: process.env['EXPO_FIREBASE_STORAGE_BUCKET'],
+        messagingSenderId: process.env['EXPO_FIREBASE_MESSAGING_SENDER_ID'],
+        appId: process.env['EXPO_FIREBASE_APP_ID'],
+        measurementId: process.env['EXPO_FIREBASE_MEASUREMENT_ID']
       },
       googleMaps: {
-        iosApiKey: process.env.EXPO_IOS_GOOGLE_MAPS_API_KEY,
-        androidApiKey: process.env.EXPO_ANDROID_GOOGLE_MAPS_API_KEY
+        iosApiKey: process.env['EXPO_IOS_GOOGLE_MAPS_API_KEY'],
+        androidApiKey: process.env['EXPO_ANDROID_GOOGLE_MAPS_API_KEY']
       },
       googlePlaces: {
-        iosApiKey: process.env.EXPO_IOS_GOOGLE_PLACES_API_KEY,
-        androidApiKey: process.env.EXPO_ANDROID_GOOGLE_PLACES_API_KEY
+        iosApiKey: process.env['EXPO_IOS_GOOGLE_PLACES_API_KEY'],
+        androidApiKey: process.env['EXPO_ANDROID_GOOGLE_PLACES_API_KEY']
       },
       sentry: {
-        dsn: process.env.SENTRY_DSN,
-        org: process.env.SENTRY_ORG,
-        project: process.env.SENTRY_PROJECT
+        dsn: process.env['SENTRY_DSN'],
+        org: process.env['SENTRY_ORG'],
+        project: process.env['SENTRY_PROJECT']
       }
     },
-    owner: process.env.EXPO_OWNER
+    owner: process.env['EXPO_OWNER']
   };
 };

@@ -2,21 +2,24 @@ import React, { useEffect, useRef } from 'react';
 import {
   Modal as RNModal,
   View,
+  Text,
   StyleSheet,
   Animated,
   TouchableWithoutFeedback,
   ViewStyle,
-  ReactNode,
 } from 'react-native';
+import type { ReactNode } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from './Button';
+
+export type ModalSize = 'small' | 'medium' | 'large' | 'full';
 
 export interface ModalProps {
   visible: boolean;
   onClose: () => void;
   title?: string;
   children: ReactNode;
-  size?: 'small' | 'medium' | 'large' | 'full';
+  size?: ModalSize;
   closeOnOverlayPress?: boolean;
   showCloseButton?: boolean;
   header?: ReactNode;
@@ -24,7 +27,7 @@ export interface ModalProps {
   style?: ViewStyle;
 }
 
-const sizeStyles: Record<ModalProps['size'], ViewStyle> = {
+const sizeStyles: Record<ModalSize, ViewStyle> = {
   small: { width: '80%', maxWidth: 320 },
   medium: { width: '90%', maxWidth: 400 },
   large: { width: '95%', maxWidth: 500 },
@@ -128,8 +131,6 @@ export function Modal({
     </RNModal>
   );
 }
-
-import { Text } from 'react-native';
 
 const styles = StyleSheet.create({
   header: {

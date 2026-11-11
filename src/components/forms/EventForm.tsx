@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { ImagePicker } from 'expo-image-picker';
+import * as ImagePicker from 'expo-image-picker';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { EventTypeSelector } from './EventTypeSelector';
@@ -33,10 +33,10 @@ const eventFormSchema = z.object({
       latitude: z.number(),
       longitude: z.number(),
     }),
-    placeId: z.string().optional(),
+    placeId: z.string().default(''),
   }),
-  startDate: z.date({ required_error: 'Start date is required' }),
-  endDate: z.date({ required_error: 'End date is required' }),
+  startDate: z.date({ message: 'Start date is required' }),
+  endDate: z.date({ message: 'End date is required' }),
   images: z.array(z.any()).max(5, 'Maximum 5 images allowed').optional(),
   maxAttendees: z.number().int().positive().optional(),
   isPublic: z.boolean().default(true),
@@ -88,7 +88,7 @@ export function EventForm({
     reset,
     formState: { errors, isSubmitting },
   } = useForm<EventFormInputs>({
-    resolver: zodResolver(eventFormSchema),
+    resolver: zodResolver(eventFormSchema) as any,
     defaultValues: {
       title: initialData?.title || editingEvent?.title || '',
       description: initialData?.description || editingEvent?.description || '',
@@ -97,6 +97,11 @@ export function EventForm({
         name: '',
         address: '',
         coordinates: { latitude: 0, longitude: 0 },
+        placeId: '',
+        city: '',
+        state: '',
+        zipCode: '',
+        country: '',
       },
       startDate: initialData?.startDate ? new Date(initialData.startDate) : editingEvent?.startDate.toDate() || new Date(Date.now() + 24 * 60 * 60 * 1000),
       endDate: initialData?.endDate ? new Date(initialData.endDate) : editingEvent?.endDate.toDate() || new Date(Date.now() + 25 * 60 * 60 * 1000),
@@ -169,8 +174,16 @@ export function EventForm({
       const imageUrls = await uploadImages();
 
       const formData: EventFormData = {
-        ...data,
-        images: images.map((img, i) => ({ uri: imageUrls[i] || img.uri })),
+        title: data.title,
+        description: data.description,
+        type: data.type,
+        location: data.location,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        maxAttendees: data.maxAttendees,
+        isPublic: data.isPublic,
+        tags: data.tags || [],
+        images: imageUrls,
       };
 
       await onSubmit(formData);
@@ -183,18 +196,31 @@ export function EventForm({
   // Load initial data for editing
   useEffect(() => {
     if (editingEvent) {
+      const locationData: LocationData = {
+        name: editingEvent.location.venueName || editingEvent.location.address,
+        address: editingEvent.location.address,
+        placeId: editingEvent.location.venueId || '',
+        coordinates: {
+          latitude: editingEvent.location.coordinates.latitude,
+          longitude: editingEvent.location.coordinates.longitude,
+        },
+        city: editingEvent.location.city,
+        state: editingEvent.location.state,
+        zipCode: '',
+        country: editingEvent.location.country,
+      };
       reset({
         title: editingEvent.title,
         description: editingEvent.description,
         type: editingEvent.type,
-        location: editingEvent.location,
+        location: locationData,
         startDate: editingEvent.startDate.toDate(),
         endDate: editingEvent.endDate.toDate(),
         maxAttendees: editingEvent.maxAttendees,
         isPublic: editingEvent.isPublic,
         tags: editingEvent.tags,
       });
-      setSelectedLocation(editingEvent.location);
+      setSelectedLocation(locationData);
     }
   }, [editingEvent, reset]);
 
@@ -218,7 +244,7 @@ export function EventForm({
       <Controller
         name="type"
         control={control}
-        rules: { required: true }
+        rules={{ required: true }}
         render={({ field }) => (
           <EventTypeSelector
             value={field.value}
@@ -234,7 +260,7 @@ export function EventForm({
       <Controller
         name="title"
         control={control}
-        rules: { required: true, minLength: 3, maxLength: 100 }
+        rules={{ required: true, minLength: 3, maxLength: 100 }}
         render={({ field }) => (
           <Input
             label="Event Title"
@@ -253,7 +279,7 @@ export function EventForm({
       <Controller
         name="description"
         control={control}
-        rules: { required: true, minLength: 10, maxLength: 2000 }
+        rules={{ required: true, minLength: 10, maxLength: 2000 }}
         render={({ field }) => (
           <Input
             label="Description"
@@ -274,7 +300,7 @@ export function EventForm({
       <Controller
         name="location"
         control={control}
-        rules: { required: true }
+        rules={{ required: true }}
         render={({ field }) => (
           <LocationAutocomplete
             label="Location"
@@ -309,7 +335,7 @@ export function EventForm({
         <Controller
           name="startDate"
           control={control}
-          rules: { required: true }
+          rules={{ required: true }}
           render={({ field }) => (
             <DateTimePicker
               label="Start Date & Time"
@@ -325,7 +351,7 @@ export function EventForm({
         <Controller
           name="endDate"
           control={control}
-          rules: { required: true }
+          rules={{ required: true }}
           render={({ field }) => (
             <DateTimePicker
               label="End Date & Time"
@@ -344,7 +370,7 @@ export function EventForm({
       <Controller
         name="maxAttendees"
         control={control}
-        rules: { min: 1 }
+        rules={{ min: 1 }}
         render={({ field }) => (
           <Input
             label="Max Attendees (Optional)"
@@ -374,7 +400,7 @@ export function EventForm({
         <Controller
           name="isPublic"
           control={control}
-          rules: { required: true }
+          rules={{ required: true }}
           render={({ field }) => (
             <Switch
               value={field.value}
@@ -431,7 +457,7 @@ export function EventForm({
         control={control}
         render={({ field }) => (
           <TagsInput
-            value={field.value}
+            value={field.value || []}
             onChange={field.onChange}
             label="Tags (Optional)"
             placeholder="Add tags like: family, free, outdoor, halloween"

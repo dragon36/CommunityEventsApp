@@ -3,22 +3,9 @@
 // =============================================================================
 
 // -----------------------------------------------------------------------------
-// BASE TYPES
+// BASE TYPES (using global.d.ts Firebase types)
 // -----------------------------------------------------------------------------
-export type Timestamp = {
-  seconds: number;
-  nanoseconds: number;
-};
-
-export type GeoPoint = {
-  latitude: number;
-  longitude: number;
-};
-
-export type DocumentReference<T = unknown> = {
-  id: string;
-  path: string;
-};
+// Timestamp, GeoPoint, DocumentReference are declared globally in global.d.ts
 
 // -----------------------------------------------------------------------------
 // USER TYPES
@@ -52,6 +39,46 @@ export interface Location {
   geohash?: string;
 }
 
+export interface LocationData {
+  name: string;
+  address: string;
+  placeId: string;
+  coordinates: { latitude: number; longitude: number };
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
+}
+
+export interface EventFormData {
+  title: string;
+  description: string;
+  type: EventType;
+  location: LocationData;
+  startDate: Date;
+  endDate: Date;
+  maxAttendees?: number;
+  isPublic: boolean;
+  tags: string[];
+  images: string[];
+}
+
+export interface LocationSuggestion {
+  placeId: string;
+  description: string;
+  structuredFormatting: {
+    mainText: string;
+    secondaryText: string;
+  };
+}
+
+export interface MapRegion {
+  latitude: number;
+  longitude: number;
+  latitudeDelta: number;
+  longitudeDelta: number;
+}
+
 export interface UserProfile {
   uid: string;
   displayName: string;
@@ -83,8 +110,9 @@ export interface UserProfile {
 // EVENT TYPES
 // -----------------------------------------------------------------------------
 export type EventVisibility = 'public' | 'private' | 'unlisted';
-export type EventStatus = 'draft' | 'published' | 'cancelled' | 'completed' | 'removed';
+export type EventStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'draft' | 'published' | 'completed' | 'removed';
 export type RSVPStatus = 'going' | 'interested' | 'not_going';
+export type EventType = 'parade' | 'trick_or_treat' | 'special_event';
 
 export interface EventLocation {
   address: string;
@@ -101,6 +129,7 @@ export interface Event {
   id: string;
   title: string;
   description: string;
+  type: EventType;
   startDate: Timestamp;
   endDate: Timestamp;
   location: EventLocation;
@@ -125,6 +154,14 @@ export interface Event {
   cancellationReason?: string;
   moderationFlagged?: boolean;
   moderationReason?: string;
+  // Additional fields for form compatibility
+  isPublic?: boolean;
+  images?: string[];
+  createdBy?: string;
+  approvedBy?: string;
+  approvedAt?: Timestamp;
+  rejectionReason?: string;
+  attendeesCount?: number;
 }
 
 export interface EventAttendee {
@@ -407,6 +444,88 @@ export type OptionalFields<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, 
 export type Nullable<T> = T | null;
 
 export type NonEmptyArray<T> = [T, ...T[]];
+
+// -----------------------------------------------------------------------------
+// ADMIN TYPES
+// -----------------------------------------------------------------------------
+export interface AdminStats {
+  totalUsers: number;
+  activeUsers: number;
+  pendingEvents: number;
+  approvedEvents: number;
+  rejectedEvents: number;
+  totalEvents: number;
+  eventsToday: number;
+  eventsThisWeek: number;
+  eventsThisMonth: number;
+  reportsPending: number;
+  reportsResolved: number;
+}
+
+export interface AdminUser {
+  uid: string;
+  email: string;
+  displayName: string;
+  photoURL?: string;
+  role: UserRole;
+  isActive: boolean;
+  emailVerified: boolean;
+  createdAt: Timestamp;
+  lastLoginAt?: Timestamp;
+  eventsCreated: number;
+  eventsAttending: number;
+  suspended?: boolean;
+}
+
+export interface AdminEvent {
+  id: string;
+  title: string;
+  description: string;
+  type: EventType;
+  status: EventStatus;
+  startDate: Timestamp;
+  endDate: Timestamp;
+  location: EventLocation;
+  organizerId: string;
+  organizerName: string;
+  organizerEmail: string;
+  creatorName: string;
+  attendeeCount: number;
+  createdAt: Timestamp;
+  approvedAt?: Timestamp;
+  approvedBy?: string;
+  rejectionReason?: string;
+  images?: string[];
+}
+
+export interface AdminAction {
+  id: string;
+  adminId: string;
+  adminName: string;
+  action: 'approve_event' | 'reject_event' | 'delete_event' | 'suspend_user' | 'activate_user' | 'change_role' | 'reset_password';
+  targetType: 'user' | 'event';
+  targetId: string;
+  targetName: string;
+  reason?: string;
+  timestamp: Timestamp;
+}
+
+export interface AppHealth {
+  status: 'healthy' | 'degraded' | 'down' | 'operational';
+  firestore: 'up' | 'down' | 'operational' | 'degraded' | 'outage';
+  auth: 'up' | 'down' | 'operational' | 'degraded' | 'outage';
+  storage: 'up' | 'down' | 'operational' | 'degraded' | 'outage';
+  functions: 'up' | 'down' | 'operational' | 'degraded' | 'outage';
+  latency: {
+    p50: number;
+    p95: number;
+    p99: number;
+  };
+  errorRate: number;
+  uptime: number;
+  lastChecked: Timestamp;
+  lastCheck: Timestamp;
+}
 
 // -----------------------------------------------------------------------------
 // CONSTANTS

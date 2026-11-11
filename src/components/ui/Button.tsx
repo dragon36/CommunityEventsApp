@@ -2,10 +2,13 @@ import React, { forwardRef } from 'react';
 import { TouchableOpacity, Text, ActivityIndicator, StyleSheet, View } from 'react-native';
 import type { TouchableOpacityProps, TextStyle, ViewStyle } from 'react-native';
 
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+export type ButtonSize = 'small' | 'medium' | 'large';
+
 export interface ButtonProps extends Omit<TouchableOpacityProps, 'children' | 'style'> {
   title: string;
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
-  size?: 'small' | 'medium' | 'large';
+  variant?: ButtonVariant;
+  size?: ButtonSize;
   fullWidth?: boolean;
   loading?: boolean;
   disabled?: boolean;
@@ -15,7 +18,7 @@ export interface ButtonProps extends Omit<TouchableOpacityProps, 'children' | 's
   textStyle?: TextStyle;
 }
 
-const variantStyles: Record<ButtonProps['variant'], ViewStyle> = {
+const variantStyles: Record<ButtonVariant, ViewStyle> = {
   primary: {
     backgroundColor: '#2EC4B6',
   },
@@ -35,13 +38,13 @@ const variantStyles: Record<ButtonProps['variant'], ViewStyle> = {
   },
 };
 
-const sizeStyles: Record<ButtonProps['size'], { paddingVertical: number; paddingHorizontal: number; borderRadius: number }> = {
+const sizeStyles: Record<ButtonSize, { paddingVertical: number; paddingHorizontal: number; borderRadius: number }> = {
   small: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 6 },
   medium: { paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8 },
   large: { paddingVertical: 16, paddingHorizontal: 32, borderRadius: 10 },
 };
 
-const textVariantStyles: Record<ButtonProps['variant'], TextStyle> = {
+const textVariantStyles: Record<ButtonVariant, TextStyle> = {
   primary: { color: '#FFFFFF' },
   secondary: { color: '#FFFFFF' },
   outline: { color: '#2EC4B6' },
@@ -49,7 +52,7 @@ const textVariantStyles: Record<ButtonProps['variant'], TextStyle> = {
   danger: { color: '#FFFFFF' },
 };
 
-const textSizeStyles: Record<ButtonProps['size'], TextStyle> = {
+const textSizeStyles: Record<ButtonSize, TextStyle> = {
   small: { fontSize: 14, fontWeight: '600' },
   medium: { fontSize: 16, fontWeight: '600' },
   large: { fontSize: 18, fontWeight: '700' },

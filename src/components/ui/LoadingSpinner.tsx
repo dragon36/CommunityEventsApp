@@ -45,7 +45,7 @@ export function LoadingOverlay({ visible, text = 'Loading...' }: { visible: bool
   );
 }
 
-export function SkeletonLoader({ width, height, borderRadius = 8 }: { width: number | string; height: number; borderRadius?: number }) {
+export function SkeletonLoader({ width, height, borderRadius = 8 }: { width: number; height: number; borderRadius?: number }) {
   return (
     <View
       style={[

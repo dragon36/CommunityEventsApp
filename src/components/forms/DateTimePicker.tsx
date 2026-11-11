@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ViewStyle, TextStyle, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Calendar from 'expo-calendar';
-import { DateTimePickerAndroid, DateTimePickerIOS } from '@react-native-community/datetimepicker';
+import RNDateTimePicker from '@react-native-community/datetimepicker';
 
 // ============================================
 // Types
@@ -52,7 +52,7 @@ export function DateTimePicker({
   format,
 }: DateTimePickerProps) {
   const [showPicker, setShowPicker] = useState(false);
-  const pickerRef = useRef<any>(null);
+  // const pickerRef = useRef<any>(null); // Not used with RNDateTimePicker
 
   // Default formatting
   const defaultFormat = (date: Date): string => {
@@ -96,30 +96,15 @@ export function DateTimePicker({
 
   // Render native picker based on platform
   const renderNativePicker = () => {
-    if (Platform.OS === 'ios') {
-      return (
-        <DateTimePickerIOS
-          ref={pickerRef}
-          value={value}
-          onChange={handleDateChange}
-          mode={mode}
-          minimumDate={minDate}
-          maximumDate={maxDate}
-          display="inline"
-          locale="en-US"
-        />
-      );
-    }
-
     return (
-      <DateTimePickerAndroid
-        ref={pickerRef}
+      <RNDateTimePicker
         value={value}
         onChange={handleDateChange}
         mode={mode}
-        minDate={minDate?.getTime()}
-        maxDate={maxDate?.getTime()}
-        display="spinner"
+        minimumDate={minDate}
+        maximumDate={maxDate}
+        display={Platform.OS === 'ios' ? 'inline' : 'spinner'}
+        locale="en-US"
       />
     );
   };
@@ -131,7 +116,7 @@ export function DateTimePicker({
         style={[
           styles.button,
           disabled && styles.buttonDisabled,
-          error && styles.buttonError,
+          error ? styles.buttonError : null,
           buttonStyle,
         ]}
         onPress={() => !disabled && setShowPicker(true)}
@@ -140,7 +125,7 @@ export function DateTimePicker({
       >
         {showIcon && (
           <Ionicons
-            name={iconName}
+            name={iconName as any}
             size={22}
             color={disabled ? '#999999' : error ? '#E71D36' : '#2EC4B6'}
             style={styles.icon}
@@ -148,7 +133,7 @@ export function DateTimePicker({
         )}
         <Text style={[styles.buttonText, textStyle]}>{formattedValue || placeholder}</Text>
         <Ionicons
-          name="chevron-down-outline"
+          name="chevron-down-outline" as any
           size={22}
           color="#999999"
           style={styles.chevron}
@@ -161,7 +146,7 @@ export function DateTimePicker({
             <View style={styles.pickerHeader}>
               <Text style={styles.pickerTitle}>{label}</Text>
               <TouchableOpacity onPress={() => setShowPicker(false)}>
-                <Ionicons name="close-outline" size={26} color="#333333" />
+                <Ionicons name="close-outline" as any size={26} color="#333333" />
               </TouchableOpacity>
             </View>
             {renderNativePicker()}
@@ -208,7 +193,7 @@ export function CalendarEventPicker({ onAddToCalendar, disabled = false, style }
       onPress={() => !disabled && setShowPicker(true)}
       disabled={disabled}
     >
-      <Ionicons name="calendar-plus-outline" size={22} color="#2EC4B6" />
+      <Ionicons name="calendar-outline" as any size={22} color="#2EC4B6" />
       <Text style={styles.calendarButtonText}>Add to Calendar</Text>
     </TouchableOpacity>
   );

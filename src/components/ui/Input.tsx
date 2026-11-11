@@ -1,9 +1,9 @@
 import React, { forwardRef } from 'react';
 import { TextInput, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import type { TextInputProps, TextStyle, ViewStyle } from 'react-native';
+import type { TextInputProps, TextStyle, ViewStyle, NativeSyntheticEvent, TextInputFocusEventData } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-export interface InputProps extends Omit<TextInputProps, 'style' | 'onChangeText' | 'value'> {
+export interface InputProps extends Omit<TextInputProps, 'style' | 'onChangeText' | 'value' | 'onBlur' | 'onFocus'> {
   label?: string;
   error?: string;
   helperText?: string;
@@ -15,8 +15,11 @@ export interface InputProps extends Omit<TextInputProps, 'style' | 'onChangeText
   inputStyle?: TextStyle;
   labelStyle?: TextStyle;
   errorStyle?: TextStyle;
+  helperStyle?: TextStyle;
   value?: string;
   onChangeText?: (text: string) => void;
+  onBlur?: (e: NativeSyntheticEvent<TextInputFocusEventData>) => void;
+  onFocus?: (e: NativeSyntheticEvent<TextInputFocusEventData>) => void;
 }
 
 export const Input = forwardRef<TextInput, InputProps>(
@@ -33,6 +36,7 @@ export const Input = forwardRef<TextInput, InputProps>(
       inputStyle,
       labelStyle,
       errorStyle,
+      helperStyle,
       value = '',
       onChangeText,
       onBlur,
@@ -61,7 +65,7 @@ export const Input = forwardRef<TextInput, InputProps>(
       borderColor: hasError ? '#E71D36' : focused ? '#2EC4B6' : '#E0E0E0',
       borderRadius: 8,
       paddingHorizontal: 12,
-      ...(focused && { shadowColor: '#000', shadowOffset: { width: 0, width: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 }),
+      ...(focused && { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 }),
     };
 
     const labelStyles: TextStyle = {
@@ -80,13 +84,13 @@ export const Input = forwardRef<TextInput, InputProps>(
       ...inputStyle,
     };
 
-    const handleBlur = (e: React.FocusEvent<TextInput>) => {
+    const handleBlur = (e: NativeSyntheticEvent<TextInputFocusEventData>) => {
       setFocused(false);
       setTouched(true);
       onBlur?.(e);
     };
 
-    const handleFocus = (e: React.FocusEvent<TextInput>) => {
+    const handleFocus = (e: NativeSyntheticEvent<TextInputFocusEventData>) => {
       setFocused(true);
       onFocus?.(e);
     };
@@ -126,7 +130,7 @@ export const Input = forwardRef<TextInput, InputProps>(
           <Text style={[{ fontSize: 12, color: '#E71D36', marginTop: 4 }, errorStyle]}>{error}</Text>
         )}
         {!hasError && helperText && (
-          <Text style={[{ fontSize: 12, color: '#999999', marginTop: 4 }, errorStyle]}>{helperText}</Text>
+          <Text style={[{ fontSize: 12, color: '#999999', marginTop: 4 }, helperStyle]}>{helperText}</Text>
         )}
       </View>
     );

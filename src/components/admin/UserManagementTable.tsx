@@ -220,11 +220,11 @@ export function UserManagementTable({
         onEndReached={onLoadMore}
         onEndReachedThreshold={0.5}
         ListFooterComponent={
-          loading && hasMore && (
+          loading && hasMore ? (
             <View style={styles.loadingFooter}>
               <Text style={styles.loadingText}>Loading more users...</Text>
             </View>
-          )
+          ) : null
         }
         contentContainerStyle={styles.listContent}
       />
