@@ -1,7 +1,10 @@
-import { useState, useCallback, useEffect } from 'react';
-import { eventService } from '@/services/firebase/firestore';
-import { authService } from '@/services/firebase/auth';
+// =============================================================================
+// COMMUNITY EVENTS APP - EVENTS HOOK (Using Factory)
+// =============================================================================
+
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Event, EventFormData, EventStatus, PaginatedResponse, AdminEvent } from '@/types';
+import { getAuthService, getDatabaseService } from '@/services/factory';
 
 // ============================================
 // Events Hook Types
@@ -71,11 +74,11 @@ export function useEvents(): UseEventsReturn {
 
   const [error, setError] = useState<string | null>(null);
 
-  // Pagination cursors
-  const approvedLastDocRef = useState<unknown | null>(null);
-  const userLastDocRef = useState<unknown | null>(null);
-  const pendingLastDocRef = useState<unknown | null>(null);
-  const allLastDocRef = useState<unknown | null>(null);
+  // Pagination cursors (using refs to avoid re-renders)
+  const approvedLastDocRef = useRef<unknown | null>(null);
+  const userLastDocRef = useRef<unknown | null>(null);
+  const pendingLastDocRef = useRef<unknown | null>(null);
+  const allLastDocRef = useRef<unknown | null>(null);
 
   const clearError = useCallback(() => setError(null), []);
 
@@ -84,10 +87,12 @@ export function useEvents(): UseEventsReturn {
     setLoading(true);
     setError(null);
     try {
+      const authService = await getAuthService();
       const user = authService.getCurrentUser();
       if (!user) throw new Error('Not authenticated');
 
-      const eventId = await eventService.createEvent(data, user.uid);
+      const dbService = await getDatabaseService();
+      const eventId = await dbService.createEvent(data, user.uid);
       return eventId;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create event';
@@ -103,21 +108,23 @@ export function useEvents(): UseEventsReturn {
     setLoading(true);
     setError(null);
     try {
+      const authService = await getAuthService();
       const user = authService.getCurrentUser();
       if (!user) throw new Error('Not authenticated');
 
       const isAdmin = await authService.checkAdminStatus();
-      await eventService.updateEvent(eventId, data, user.uid, isAdmin);
+      const dbService = await getDatabaseService();
+      await dbService.updateEvent(eventId, data, user.uid, isAdmin);
 
       // Update local state
       setApprovedEvents((prev) =>
-        prev.map((event) => (event.id === eventId ? { ...event, ...data } : event))
+        prev.map((event) => (event.id === eventId ? { ...event, ...data, location: data.location as any } : event))
       );
       setUserEvents((prev) =>
-        prev.map((event) => (event.id === eventId ? { ...event, ...data } : event))
+        prev.map((event) => (event.id === eventId ? { ...event, ...data, location: data.location as any } : event))
       );
       setAllEvents((prev) =>
-        prev.map((event) => (event.id === eventId ? { ...event, ...data } : event))
+        prev.map((event) => (event.id === eventId ? { ...event, ...data, location: data.location as any } : event))
       );
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update event';
@@ -133,11 +140,13 @@ export function useEvents(): UseEventsReturn {
     setLoading(true);
     setError(null);
     try {
+      const authService = await getAuthService();
       const user = authService.getCurrentUser();
       if (!user) throw new Error('Not authenticated');
 
       const isAdmin = await authService.checkAdminStatus();
-      await eventService.deleteEvent(eventId, user.uid, isAdmin);
+      const dbService = await getDatabaseService();
+      await dbService.deleteEvent(eventId, user.uid, isAdmin);
 
       // Update local state
       setApprovedEvents((prev) => prev.filter((event) => event.id !== eventId));
@@ -152,17 +161,17 @@ export function useEvents(): UseEventsReturn {
     }
   }, []);
 
-  // Fetch approved events (for map/public view)
+  // Fetch approved events (for map/list)
   const fetchApprovedEvents = useCallback(
     async (region?: { center: { lat: number; lng: number }; radiusKm: number }) => {
       setLoadingApproved(true);
       setError(null);
       try {
-        const response = await eventService.getApprovedEvents(region);
+        const dbService = await getDatabaseService();
+        const response = await dbService.getApprovedEvents(region);
         setApprovedEvents(response.data);
         setHasMoreApproved(response.hasMore);
-        // Store last doc for pagination
-        // Note: We'd need to use a ref for the cursor in a real implementation
+        approvedLastDocRef.current = response.lastDoc;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to fetch events';
         setError(message);
@@ -178,7 +187,8 @@ export function useEvents(): UseEventsReturn {
     setLoadingUser(true);
     setError(null);
     try {
-      const events = await eventService.getUserEvents(userId, status);
+      const dbService = await getDatabaseService();
+      const events = await dbService.getUserEvents(userId, status);
       setUserEvents(events);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch your events';
@@ -193,9 +203,11 @@ export function useEvents(): UseEventsReturn {
     setLoadingPending(true);
     setError(null);
     try {
-      const response = await eventService.getPendingEvents();
+      const dbService = await getDatabaseService();
+      const response = await dbService.getPendingEvents();
       setPendingEvents(response.data);
       setHasMorePending(response.hasMore);
+      pendingLastDocRef.current = response.lastDoc;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch pending events';
       setError(message);
@@ -209,9 +221,11 @@ export function useEvents(): UseEventsReturn {
     setLoadingAll(true);
     setError(null);
     try {
-      const response = await eventService.getAllEventsPaginated(20, null, statusFilter);
+      const dbService = await getDatabaseService();
+      const response = await dbService.getAllEventsPaginated(20, allLastDocRef.current, statusFilter);
       setAllEvents(response.data);
       setHasMoreAll(response.hasMore);
+      allLastDocRef.current = response.lastDoc;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch events';
       setError(message);
@@ -223,26 +237,54 @@ export function useEvents(): UseEventsReturn {
   // Load more approved events
   const loadMoreApproved = useCallback(async () => {
     if (!hasMoreApproved || loadingApproved) return;
-    // Implementation would use the stored lastDoc cursor
+    setLoadingApproved(true);
+    try {
+      const dbService = await getDatabaseService();
+      const response = await dbService.getApprovedEvents(undefined, 20, approvedLastDocRef.current);
+      setApprovedEvents((prev) => [...prev, ...response.data]);
+      setHasMoreApproved(response.hasMore);
+      approvedLastDocRef.current = response.lastDoc;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load more events';
+      setError(message);
+    } finally {
+      setLoadingApproved(false);
+    }
   }, [hasMoreApproved, loadingApproved]);
 
   // Load more user events
   const loadMoreUser = useCallback(async () => {
     if (!hasMoreUser || loadingUser) return;
+    // Implementation would use the stored lastDoc cursor
   }, [hasMoreUser, loadingUser]);
 
   // Load more pending events
   const loadMorePending = useCallback(async () => {
     if (!hasMorePending || loadingPending) return;
+    setLoadingPending(true);
+    try {
+      const dbService = await getDatabaseService();
+      const response = await dbService.getPendingEvents(20, pendingLastDocRef.current);
+      setPendingEvents((prev) => [...prev, ...response.data]);
+      setHasMorePending(response.hasMore);
+      pendingLastDocRef.current = response.lastDoc;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load more events';
+      setError(message);
+    } finally {
+      setLoadingPending(false);
+    }
   }, [hasMorePending, loadingPending]);
 
   // Load more all events
   const loadMoreAll = useCallback(async () => {
     if (!hasMoreAll || loadingAll) return;
-  }, [hasMoreAll, loadingAll]);
+    await fetchAllEvents();
+  }, [hasMoreAll, loadingAll, fetchAllEvents]);
 
   // Refresh all data
   const refresh = useCallback(async () => {
+    const authService = await getAuthService();
     const user = authService.getCurrentUser();
     if (user) {
       await fetchUserEvents(user.uid);

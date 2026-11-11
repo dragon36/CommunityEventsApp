@@ -1,3 +1,8 @@
+// =============================================================================
+// COMMUNITY EVENTS APP - FIREBASE AUTH ADAPTER
+// =============================================================================
+// This file wraps the existing Firebase auth service to conform to the AuthService interface.
+
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -11,23 +16,46 @@ import {
   reauthenticateWithCredential,
   EmailAuthProvider,
   sendEmailVerification,
-  User,
-  UserCredential,
-  Auth,
+  User as FirebaseUser,
+  onAuthStateChanged as firebaseOnAuthStateChanged,
 } from 'firebase/auth';
 import { auth } from './config';
 import { userService } from './firestore';
 import type { RegisterFormData, LoginFormData, UpdateProfileFormData } from '@/types';
+import type { AuthService, AuthUser, AuthSession, PasswordValidationResult } from '../interfaces';
 
-// ============================================
-// Auth Service
-// ============================================
+// Convert Firebase User to our AuthUser interface
+function convertFirebaseUser(firebaseUser: FirebaseUser): AuthUser {
+  return {
+    uid: firebaseUser.uid,
+    email: firebaseUser.email,
+    displayName: firebaseUser.displayName,
+    photoURL: firebaseUser.photoURL,
+    emailVerified: firebaseUser.emailVerified,
+    isAnonymous: firebaseUser.isAnonymous,
+    metadata: {
+      creationTime: firebaseUser.metadata.creationTime,
+      lastSignInTime: firebaseUser.metadata.lastSignInTime,
+    },
+  };
+}
 
-export const authService = {
+// Get session from user (async)
+async function getSessionFromUser(firebaseUser: FirebaseUser): Promise<AuthSession> {
+  const accessToken = await firebaseUser.getIdToken();
+  return {
+    accessToken,
+    refreshToken: '', // Not available in client SDK
+    expiresIn: 3600,
+    tokenType: 'Bearer',
+    user: convertFirebaseUser(firebaseUser),
+  };
+}
+
+export const firebaseAuthAdapter: AuthService = {
   // Register new user
-  async register(data: RegisterFormData): Promise<UserCredential> {
-    // Validate password strength
-    const passwordValidation = validatePassword(data.password);
+  async register(data: RegisterFormData): Promise<{ user: AuthUser; session: AuthSession }> {
+    const passwordValidation = this.validatePassword(data.password);
     if (!passwordValidation.valid) {
       throw new Error(passwordValidation.message);
     }
@@ -36,15 +64,12 @@ export const authService = {
       throw new Error('Passwords do not match');
     }
 
-    // Create user with email and password
     const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
 
-    // Update profile with display name
     await firebaseUpdateProfile(userCredential.user, {
       displayName: data.displayName,
     });
 
-    // Send email verification
     await sendEmailVerification(userCredential.user);
 
     // Create user profile in Firestore
@@ -53,17 +78,22 @@ export const authService = {
       displayName: data.displayName,
     });
 
-    return userCredential;
+    const user = convertFirebaseUser(userCredential.user);
+    const session = await getSessionFromUser(userCredential.user);
+
+    return { user, session };
   },
 
   // Login user
-  async login(data: LoginFormData): Promise<UserCredential> {
+  async login(data: LoginFormData): Promise<{ user: AuthUser; session: AuthSession }> {
     const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
 
-    // Update last login
     await userService.updateLastLogin(userCredential.user.uid);
 
-    return userCredential;
+    const user = convertFirebaseUser(userCredential.user);
+    const session = await getSessionFromUser(userCredential.user);
+
+    return { user, session };
   },
 
   // Logout user
@@ -83,7 +113,7 @@ export const authService = {
 
   // Confirm password reset
   async confirmPasswordReset(oobCode: string, newPassword: string): Promise<void> {
-    const passwordValidation = validatePassword(newPassword);
+    const passwordValidation = this.validatePassword(newPassword);
     if (!passwordValidation.valid) {
       throw new Error(passwordValidation.message);
     }
@@ -104,10 +134,7 @@ export const authService = {
     }
 
     // Update Firestore profile
-    await userService.updateUserProfile(user.uid, {
-      ...data,
-      // notificationSettings is handled separately
-    });
+    await userService.updateUserProfile(user.uid, data);
   },
 
   // Update email
@@ -115,13 +142,10 @@ export const authService = {
     const user = auth.currentUser;
     if (!user) throw new Error('No authenticated user');
 
-    // Re-authenticate for sensitive operation
     const credential = EmailAuthProvider.credential(user.email!, password);
     await reauthenticateWithCredential(user, credential);
-
     await updateEmail(user, newEmail);
 
-    // Update Firestore
     await userService.updateUserProfile(user.uid, { email: newEmail });
   },
 
@@ -130,15 +154,13 @@ export const authService = {
     const user = auth.currentUser;
     if (!user) throw new Error('No authenticated user');
 
-    const passwordValidation = validatePassword(newPassword);
+    const passwordValidation = this.validatePassword(newPassword);
     if (!passwordValidation.valid) {
       throw new Error(passwordValidation.message);
     }
 
-    // Re-authenticate for sensitive operation
     const credential = EmailAuthProvider.credential(user.email!, currentPassword);
     await reauthenticateWithCredential(user, credential);
-
     await updatePassword(user, newPassword);
   },
 
@@ -150,8 +172,22 @@ export const authService = {
   },
 
   // Get current user
-  getCurrentUser(): User | null {
-    return auth.currentUser;
+  getCurrentUser(): AuthUser | null {
+    const user = auth.currentUser;
+    return user ? convertFirebaseUser(user) : null;
+  },
+
+  // Get current session
+  getCurrentSession(): AuthSession | null {
+    const user = auth.currentUser;
+    if (!user) return null;
+    return {
+      accessToken: '',
+      refreshToken: '',
+      expiresIn: 3600,
+      tokenType: 'Bearer',
+      user: convertFirebaseUser(user),
+    };
   },
 
   // Check if user is admin (via custom claims)
@@ -167,77 +203,67 @@ export const authService = {
     }
   },
 
-  // Refresh ID token (forces custom claims refresh)
+  // Refresh ID token
   async refreshToken(): Promise<string> {
     const user = auth.currentUser;
     if (!user) throw new Error('No authenticated user');
     return await user.getIdToken(true);
   },
+
+  // Auth state observer
+  onAuthStateChanged(callback: (user: AuthUser | null, session: AuthSession | null) => void): () => void {
+    return firebaseOnAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const user = convertFirebaseUser(firebaseUser);
+        const session = await getSessionFromUser(firebaseUser);
+        callback(user, session);
+      } else {
+        callback(null, null);
+      }
+    });
+  },
+
+  // Password Validation
+  validatePassword(password: string): PasswordValidationResult {
+    const checks = {
+      length: password.length >= 8,
+      uppercase: /[A-Z]/.test(password),
+      lowercase: /[a-z]/.test(password),
+      number: /\d/.test(password),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+    };
+
+    const passedChecks = Object.values(checks).filter(Boolean).length;
+    const score = Math.min(passedChecks, 4);
+
+    if (!checks.length) {
+      return { valid: false, message: 'Password must be at least 8 characters', score };
+    }
+    if (!checks.uppercase) {
+      return { valid: false, message: 'Password must contain at least one uppercase letter', score };
+    }
+    if (!checks.lowercase) {
+      return { valid: false, message: 'Password must contain at least one lowercase letter', score };
+    }
+    if (!checks.number) {
+      return { valid: false, message: 'Password must contain at least one number', score };
+    }
+    if (!checks.special) {
+      return { valid: false, message: 'Password must contain at least one special character', score };
+    }
+
+    return { valid: true, message: 'Password is strong', score };
+  },
+
+  getPasswordStrengthLabel(score: number): string {
+    const labels = ['Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
+    return labels[Math.min(score, 4)];
+  },
+
+  getPasswordStrengthColor(score: number): string {
+    const colors = ['#E71D36', '#FF6B35', '#FFA500', '#2EC4B6', '#00C851'];
+    return colors[Math.min(score, 4)];
+  },
 };
 
-// ============================================
-// Password Validation
-// ============================================
-
-interface PasswordValidationResult {
-  valid: boolean;
-  message: string;
-  score: number; // 0-4
-}
-
-export function validatePassword(password: string): PasswordValidationResult {
-  const checks = {
-    length: password.length >= 8,
-    uppercase: /[A-Z]/.test(password),
-    lowercase: /[a-z]/.test(password),
-    number: /\d/.test(password),
-    special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
-  };
-
-  const passedChecks = Object.values(checks).filter(Boolean).length;
-  const score = Math.min(passedChecks, 4);
-
-  if (!checks.length) {
-    return { valid: false, message: 'Password must be at least 8 characters', score };
-  }
-  if (!checks.uppercase) {
-    return { valid: false, message: 'Password must contain at least one uppercase letter', score };
-  }
-  if (!checks.lowercase) {
-    return { valid: false, message: 'Password must contain at least one lowercase letter', score };
-  }
-  if (!checks.number) {
-    return { valid: false, message: 'Password must contain at least one number', score };
-  }
-  if (!checks.special) {
-    return { valid: false, message: 'Password must contain at least one special character', score };
-  }
-
-  return { valid: true, message: 'Password is strong', score };
-}
-
-export function getPasswordStrengthLabel(score: number): string {
-  const labels = ['Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
-  return labels[Math.min(score, 4)];
-}
-
-export function getPasswordStrengthColor(score: number): string {
-  const colors = ['#E71D36', '#FF6B35', '#FFA500', '#2EC4B6', '#00C851'];
-  return colors[Math.min(score, 4)];
-}
-
-// ============================================
-// Auth State Helpers
-// ============================================
-
-export const onAuthStateChanged = (callback: (user: User | null) => void): (() => void) => {
-  return auth.onAuthStateChanged(callback);
-};
-
-export const getIdToken = async (forceRefresh = false): Promise<string | null> => {
-  const user = auth.currentUser;
-  if (!user) return null;
-  return await user.getIdToken(forceRefresh);
-};
-
-export default authService;
+export default firebaseAuthAdapter;

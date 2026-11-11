@@ -1,7 +1,10 @@
-import { useState, useCallback, useEffect } from 'react';
-import { adminService, userService, eventService } from '@/services/firebase/firestore';
-import { authService } from '@/services/firebase/auth';
+// =============================================================================
+// COMMUNITY EVENTS APP - ADMIN HOOK (Using Factory)
+// =============================================================================
+
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { AdminStats, AppHealth, AdminUser, AdminEvent, AdminAction, PaginatedResponse } from '@/types';
+import { getAuthService, getDatabaseService } from '@/services/factory';
 
 // ============================================
 // Admin Hook Types
@@ -86,14 +89,15 @@ export function useAdmin(): UseAdminReturn {
   const [error, setError] = useState<string | null>(null);
 
   // Pagination cursors (using refs to avoid re-renders)
-  const usersLastDocRef = useState<unknown | null>(null);
-  const pendingEventsLastDocRef = useState<unknown | null>(null);
-  const allEventsLastDocRef = useState<unknown | null>(null);
+  const usersLastDocRef = useRef<unknown | null>(null);
+  const pendingEventsLastDocRef = useRef<unknown | null>(null);
+  const allEventsLastDocRef = useRef<unknown | null>(null);
 
   const clearError = useCallback(() => setError(null), []);
 
   // Check if current user is admin
   const checkAdminAccess = useCallback(async (): Promise<boolean> => {
+    const authService = await getAuthService();
     const isAdmin = await authService.checkAdminStatus();
     if (!isAdmin) {
       setError('Admin access required');
@@ -108,7 +112,8 @@ export function useAdmin(): UseAdminReturn {
     setLoadingStats(true);
     setError(null);
     try {
-      const data = await adminService.getStats();
+      const dbService = await getDatabaseService();
+      const data = await dbService.getStats();
       setStats(data);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch stats';
@@ -124,7 +129,8 @@ export function useAdmin(): UseAdminReturn {
     setLoadingHealth(true);
     setError(null);
     try {
-      const data = await adminService.getHealth();
+      const dbService = await getDatabaseService();
+      const data = await dbService.getHealth();
       setHealth(data);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch health';
@@ -141,15 +147,15 @@ export function useAdmin(): UseAdminReturn {
       setLoadingUsers(true);
       setError(null);
       try {
-        const response = await userService.getUsersPaginated(pageSize, usersLastDocRef[0] as any, filters);
-        if (usersLastDocRef[0] === null) {
+        const dbService = await getDatabaseService();
+        const response = await dbService.getUsersPaginated(pageSize, usersLastDocRef.current, filters);
+        if (usersLastDocRef.current === null) {
           setUsers(response.data);
         } else {
           setUsers((prev) => [...prev, ...response.data]);
         }
         setUsersHasMore(response.hasMore);
-        // Update cursor ref
-        usersLastDocRef[1](response.lastDoc);
+        usersLastDocRef.current = response.lastDoc;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to fetch users';
         setError(message);
@@ -172,10 +178,11 @@ export function useAdmin(): UseAdminReturn {
     setLoadingPendingEvents(true);
     setError(null);
     try {
-      const response = await eventService.getPendingEvents();
+      const dbService = await getDatabaseService();
+      const response = await dbService.getPendingEvents();
       setPendingEvents(response.data);
       setPendingEventsHasMore(response.hasMore);
-      pendingEventsLastDocRef[1](response.lastDoc);
+      pendingEventsLastDocRef.current = response.lastDoc;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch pending events';
       setError(message);
@@ -187,7 +194,19 @@ export function useAdmin(): UseAdminReturn {
   // Load more pending events
   const loadMorePendingEvents = useCallback(async () => {
     if (!pendingEventsHasMore || loadingPendingEvents) return;
-    // Implementation would use cursor
+    setLoadingPendingEvents(true);
+    try {
+      const dbService = await getDatabaseService();
+      const response = await dbService.getPendingEvents(20, pendingEventsLastDocRef.current);
+      setPendingEvents((prev) => [...prev, ...response.data]);
+      setPendingEventsHasMore(response.hasMore);
+      pendingEventsLastDocRef.current = response.lastDoc;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load more pending events';
+      setError(message);
+    } finally {
+      setLoadingPendingEvents(false);
+    }
   }, [pendingEventsHasMore, loadingPendingEvents]);
 
   // Fetch all events (admin view)
@@ -197,14 +216,15 @@ export function useAdmin(): UseAdminReturn {
       setLoadingAllEvents(true);
       setError(null);
       try {
-        const response = await eventService.getAllEventsPaginated(20, allEventsLastDocRef[0] as any, statusFilter);
-        if (allEventsLastDocRef[0] === null) {
+        const dbService = await getDatabaseService();
+        const response = await dbService.getAllEventsPaginated(20, allEventsLastDocRef.current, statusFilter);
+        if (allEventsLastDocRef.current === null) {
           setAllEvents(response.data);
         } else {
           setAllEvents((prev) => [...prev, ...response.data]);
         }
         setAllEventsHasMore(response.hasMore);
-        allEventsLastDocRef[1](response.lastDoc);
+        allEventsLastDocRef.current = response.lastDoc;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to fetch events';
         setError(message);
@@ -227,7 +247,8 @@ export function useAdmin(): UseAdminReturn {
     setLoadingActionLog(true);
     setError(null);
     try {
-      const data = await adminService.getActionLog();
+      const dbService = await getDatabaseService();
+      const data = await dbService.getActionLog();
       setActionLog(data);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch action log';
@@ -244,10 +265,12 @@ export function useAdmin(): UseAdminReturn {
       setLoading(true);
       setError(null);
       try {
+        const authService = await getAuthService();
         const currentUser = authService.getCurrentUser();
         if (!currentUser) throw new Error('Not authenticated');
 
-        await userService.updateUserRole(uid, role, currentUser.uid);
+        const dbService = await getDatabaseService();
+        await dbService.updateUserRole(uid, role, currentUser.uid);
 
         // Update local state
         setUsers((prev) =>
@@ -273,10 +296,12 @@ export function useAdmin(): UseAdminReturn {
       setLoading(true);
       setError(null);
       try {
+        const authService = await getAuthService();
         const currentUser = authService.getCurrentUser();
         if (!currentUser) throw new Error('Not authenticated');
 
-        await userService.toggleUserActive(uid, isActive, currentUser.uid);
+        const dbService = await getDatabaseService();
+        await dbService.toggleUserActive(uid, isActive, currentUser.uid);
 
         // Update local state
         setUsers((prev) =>
@@ -301,7 +326,8 @@ export function useAdmin(): UseAdminReturn {
       setLoading(true);
       setError(null);
       try {
-        await userService.requestPasswordReset(email);
+        const dbService = await getDatabaseService();
+        await dbService.requestPasswordReset(email);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to send password reset';
         setError(message);
@@ -320,10 +346,12 @@ export function useAdmin(): UseAdminReturn {
       setLoading(true);
       setError(null);
       try {
+        const authService = await getAuthService();
         const currentUser = authService.getCurrentUser();
         if (!currentUser) throw new Error('Not authenticated');
 
-        await eventService.approveEvent(eventId, currentUser.uid);
+        const dbService = await getDatabaseService();
+        await dbService.approveEvent(eventId, currentUser.uid);
 
         // Update local state
         setPendingEvents((prev) => prev.filter((e) => e.id !== eventId));
@@ -349,10 +377,12 @@ export function useAdmin(): UseAdminReturn {
       setLoading(true);
       setError(null);
       try {
+        const authService = await getAuthService();
         const currentUser = authService.getCurrentUser();
         if (!currentUser) throw new Error('Not authenticated');
 
-        await eventService.rejectEvent(eventId, currentUser.uid, reason);
+        const dbService = await getDatabaseService();
+        await dbService.rejectEvent(eventId, currentUser.uid, reason);
 
         // Update local state
         setPendingEvents((prev) => prev.filter((e) => e.id !== eventId));
@@ -378,10 +408,12 @@ export function useAdmin(): UseAdminReturn {
       setLoading(true);
       setError(null);
       try {
+        const authService = await getAuthService();
         const currentUser = authService.getCurrentUser();
         if (!currentUser) throw new Error('Not authenticated');
 
-        await eventService.deleteEvent(eventId, currentUser.uid, true);
+        const dbService = await getDatabaseService();
+        await dbService.deleteEvent(eventId, currentUser.uid, true);
 
         // Update local state
         setPendingEvents((prev) => prev.filter((e) => e.id !== eventId));

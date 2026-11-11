@@ -545,10 +545,12 @@ export const useLocalStorage = <T>(key: string, initialValue: T) => {
 };
 
 // -----------------------------------------------------------------------------
-// PERMISSIONS HOOK
+// PERMISSIONS HOOKS (using individual Expo SDK modules)
 // -----------------------------------------------------------------------------
-import * as Permissions from 'expo-permissions';
 import * as Location from 'expo-location';
+import * as Calendar from 'expo-calendar';
+import * as ImagePicker from 'expo-image-picker';
+import * as Notifications from 'expo-notifications';
 
 export const useLocationPermission = () => {
   const [permission, setPermission] = useState<Location.PermissionStatus | null>(null);
@@ -563,7 +565,7 @@ export const useLocationPermission = () => {
   }, []);
 
   useEffect(() => {
-    Location.getForegroundPermissionsAsync().then(({ status }) => {
+    Location.getForegroundPermissionsAsync().then(({ status }: { status: Location.PermissionStatus }) => {
       setPermission(status);
       setLoading(false);
     });
@@ -573,19 +575,19 @@ export const useLocationPermission = () => {
 };
 
 export const useCalendarPermission = () => {
-  const [permission, setPermission] = useState<Permissions.PermissionStatus | null>(null);
+  const [permission, setPermission] = useState<Calendar.PermissionStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
   const requestPermission = useCallback(async () => {
     setLoading(true);
-    const { status } = await Permissions.askAsync(Permissions.CALENDAR);
+    const { status } = await Calendar.requestCalendarPermissionsAsync();
     setPermission(status);
     setLoading(false);
     return status === 'granted';
   }, []);
 
   useEffect(() => {
-    Permissions.getAsync(Permissions.CALENDAR).then(({ status }) => {
+    Calendar.getCalendarPermissionsAsync().then(({ status }: { status: Calendar.PermissionStatus }) => {
       setPermission(status);
       setLoading(false);
     });
@@ -595,19 +597,19 @@ export const useCalendarPermission = () => {
 };
 
 export const useCameraPermission = () => {
-  const [permission, setPermission] = useState<Permissions.PermissionStatus | null>(null);
+  const [permission, setPermission] = useState<ImagePicker.PermissionStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
   const requestPermission = useCallback(async () => {
     setLoading(true);
-    const { status } = await Permissions.askAsync(Permissions.CAMERA);
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
     setPermission(status);
     setLoading(false);
     return status === 'granted';
   }, []);
 
   useEffect(() => {
-    Permissions.getAsync(Permissions.CAMERA).then(({ status }) => {
+    ImagePicker.getCameraPermissionsAsync().then(({ status }: { status: ImagePicker.PermissionStatus }) => {
       setPermission(status);
       setLoading(false);
     });
@@ -617,19 +619,19 @@ export const useCameraPermission = () => {
 };
 
 export const useMediaLibraryPermission = () => {
-  const [permission, setPermission] = useState<Permissions.PermissionStatus | null>(null);
+  const [permission, setPermission] = useState<ImagePicker.PermissionStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
   const requestPermission = useCallback(async () => {
     setLoading(true);
-    const { status } = await Permissions.askAsync(Permissions.MEDIA_LIBRARY);
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     setPermission(status);
     setLoading(false);
     return status === 'granted';
   }, []);
 
   useEffect(() => {
-    Permissions.getAsync(Permissions.MEDIA_LIBRARY).then(({ status }) => {
+    ImagePicker.getMediaLibraryPermissionsAsync().then(({ status }: { status: ImagePicker.PermissionStatus }) => {
       setPermission(status);
       setLoading(false);
     });
@@ -639,19 +641,19 @@ export const useMediaLibraryPermission = () => {
 };
 
 export const useNotificationPermission = () => {
-  const [permission, setPermission] = useState<Permissions.PermissionStatus | null>(null);
+  const [permission, setPermission] = useState<Notifications.PermissionStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
   const requestPermission = useCallback(async () => {
     setLoading(true);
-    const { status } = await Permissions.askAsync(Permissions.NOTIFICATIONS);
+    const { status } = await Notifications.requestPermissionsAsync();
     setPermission(status);
     setLoading(false);
     return status === 'granted';
   }, []);
 
   useEffect(() => {
-    Permissions.getAsync(Permissions.NOTIFICATIONS).then(({ status }) => {
+    Notifications.getPermissionsAsync().then(({ status }: { status: Notifications.PermissionStatus }) => {
       setPermission(status);
       setLoading(false);
     });

@@ -121,8 +121,6 @@ export function useLocation(): UseLocationReturn {
 
       const locationData = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
-        maximumAge: 10000,
-        timeout: 15000,
         ...options,
       });
 
@@ -130,6 +128,7 @@ export function useLocation(): UseLocationReturn {
       const locationResult: LocationData = {
         name: 'Current Location',
         address: '',
+        placeId: '',
         coordinates: {
           latitude: coords.latitude,
           longitude: coords.longitude,
@@ -191,6 +190,7 @@ export function useLocation(): UseLocationReturn {
             const locationResult: LocationData = {
               name: 'Current Location',
               address: '',
+              placeId: '',
               coordinates: {
                 latitude: coords.latitude,
                 longitude: coords.longitude,
@@ -224,6 +224,7 @@ export function useLocation(): UseLocationReturn {
       const result = await Location.reverseGeocodeAsync({ latitude, longitude });
       if (result.length > 0) {
         const place = result[0];
+        if (!place) return null;
         const address = [
           place.streetNumber,
           place.street,
@@ -238,6 +239,7 @@ export function useLocation(): UseLocationReturn {
         return {
           name: place.name || address,
           address,
+          placeId: '',
           coordinates: { latitude, longitude },
           city: place.city || '',
           state: place.region || '',
@@ -300,7 +302,8 @@ export function useUserRegion(): { region: MapRegion | null; loading: boolean; e
 // Hook for location search with autocomplete
 // ============================================
 
-import { getPlaceAutocomplete, getPlaceDetails, type LocationSuggestion } from '@/services/maps/googlePlaces';
+import { getPlaceAutocomplete, getPlaceDetails } from '@/services/maps/googlePlaces';
+import type { LocationSuggestion } from '@/types';
 
 export function useLocationSearch() {
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);

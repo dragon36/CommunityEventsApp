@@ -13,9 +13,7 @@ import { LocationAutocomplete } from '@/components/map/LocationAutocomplete';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useLocation } from '@/hooks/useLocation';
 import { useCalendar } from '@/hooks/useCalendar';
-import { eventService } from '@/services/firebase/firestore';
-import { storageService } from '@/services/firebase/storage';
-import { authService } from '@/services/firebase/auth';
+import { getDatabaseService, getStorageService, getAuthService } from '@/services/factory';
 import type { EventFormData, EventType, LocationData, Event } from '@/types';
 
 // ============================================
@@ -151,6 +149,7 @@ export function EventForm({
     if (images.length === 0) return [];
 
     setUploadingImages(true);
+    const storageService = await getStorageService();
     const uploadPromises = images.map((image, index) =>
       storageService.uploadFile(image.uri, {
         folder: `events/temp`,

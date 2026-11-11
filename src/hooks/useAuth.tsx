@@ -1,9 +1,11 @@
+// =============================================================================
+// COMMUNITY EVENTS APP - AUTH HOOK (Using Factory)
+// =============================================================================
+
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
-import { User, onAuthStateChanged as firebaseOnAuthStateChanged } from 'firebase/auth';
-import { auth, getIdToken } from '@/services/firebase/config';
-import { authService } from '@/services/firebase/auth';
-import { userService } from '@/services/firebase/firestore';
+import { User } from 'firebase/auth';
 import type { UserProfile, UserRole } from '@/types';
+import { getAuthService, getDatabaseService, initializeServices } from '@/services/factory';
 
 // ============================================
 // Auth Context Types
@@ -44,24 +46,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [servicesInitialized, setServicesInitialized] = useState(false);
 
   // Clear error
   const clearError = useCallback(() => setError(null), []);
 
+  // Initialize services on mount
+  useEffect(() => {
+    initializeServices().then(() => {
+      setServicesInitialized(true);
+    }).catch((err) => {
+      console.error('Failed to initialize services:', err);
+      setServicesInitialized(true); // Continue anyway
+    });
+  }, []);
+
   // Fetch user profile
   const fetchProfile = useCallback(async (uid: string) => {
     try {
-      const userProfile = await userService.getUserProfile(uid);
+      const dbService = await getDatabaseService();
+      const userProfile = await dbService.getUserProfile(uid);
       setProfile(userProfile);
 
       // Check admin status
       const adminStatus = userProfile?.role === 'admin';
       setIsAdmin(adminStatus);
 
-      // Also check custom claims as backup
+      // Also check custom claims as backup (Firebase only)
       if (!adminStatus) {
-        const idTokenResult = await auth.currentUser?.getIdTokenResult();
-        const customClaimsAdmin = idTokenResult?.claims?.admin === true;
+        const authService = await getAuthService();
+        const customClaimsAdmin = await authService.checkAdminStatus();
         setIsAdmin(customClaimsAdmin);
       }
     } catch (err) {
@@ -71,27 +85,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Auth state listener
+  // Auth state listener - use factory's auth service
   useEffect(() => {
-    const unsubscribe = firebaseOnAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
-      if (firebaseUser) {
-        await fetchProfile(firebaseUser.uid);
-      } else {
-        setProfile(null);
-        setIsAdmin(false);
-      }
+    if (!servicesInitialized) return;
+
+    let unsubscribe: (() => void) | undefined;
+
+    getAuthService().then((authService) => {
+      unsubscribe = authService.onAuthStateChanged(async (authUser) => {
+        // Convert AuthUser to Firebase User for compatibility
+        // Note: In Supabase mode, this will be different
+        setUser(authUser as User | null);
+        if (authUser) {
+          await fetchProfile(authUser.uid);
+        } else {
+          setProfile(null);
+          setIsAdmin(false);
+        }
+        setLoading(false);
+      });
+    }).catch((err) => {
+      console.error('Failed to get auth service:', err);
       setLoading(false);
     });
 
-    return () => unsubscribe();
-  }, [fetchProfile]);
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [fetchProfile, servicesInitialized]);
 
   // Auth actions
   const login = useCallback(async (email: string, password: string) => {
     setError(null);
     setLoading(true);
     try {
+      const authService = await getAuthService();
       await authService.login({ email, password });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed';
@@ -106,6 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
     setLoading(true);
     try {
+      const authService = await getAuthService();
       await authService.register({ ...data, confirmPassword: data.password });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Registration failed';
@@ -120,6 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
     setLoading(true);
     try {
+      const authService = await getAuthService();
       await authService.logout();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Logout failed';
@@ -133,6 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const sendPasswordReset = useCallback(async (email: string) => {
     setError(null);
     try {
+      const authService = await getAuthService();
       await authService.sendPasswordReset(email);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to send reset email';
@@ -144,6 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resetPassword = useCallback(async (oobCode: string, newPassword: string) => {
     setError(null);
     try {
+      const authService = await getAuthService();
       await authService.confirmPasswordReset(oobCode, newPassword);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to reset password';
@@ -155,6 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateProfile = useCallback(async (data: Partial<UserProfile>) => {
     setError(null);
     try {
+      const authService = await getAuthService();
       await authService.updateProfile(data);
       // Refresh profile
       if (user) {
@@ -170,6 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateEmail = useCallback(async (newEmail: string, password: string) => {
     setError(null);
     try {
+      const authService = await getAuthService();
       await authService.updateEmail(newEmail, password);
       if (user) {
         await fetchProfile(user.uid);
@@ -184,6 +218,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updatePassword = useCallback(async (currentPassword: string, newPassword: string) => {
     setError(null);
     try {
+      const authService = await getAuthService();
       await authService.updatePassword(currentPassword, newPassword);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update password';
@@ -195,6 +230,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const sendEmailVerification = useCallback(async () => {
     setError(null);
     try {
+      const authService = await getAuthService();
       await authService.sendEmailVerification();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to send verification email';
@@ -205,6 +241,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshToken = useCallback(async () => {
     try {
+      const authService = await getAuthService();
       return await authService.refreshToken();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to refresh token';

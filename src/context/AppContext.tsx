@@ -3,7 +3,8 @@
 // =============================================================================
 
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
-import { Platform, AppState, AppStateStatus, NetInfo } from 'react-native';
+import { Platform, AppState, AppStateStatus } from 'react-native';
+import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthContext';
 import { api } from '@/services/api';
@@ -140,7 +141,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // Network status
   useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener(state => {
+    const unsubscribe = NetInfo.addEventListener((state: { isConnected: boolean | null }) => {
       setIsOnline(state.isConnected ?? false);
     });
     return () => unsubscribe();

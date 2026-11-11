@@ -48,6 +48,9 @@ export interface LocationData {
   state?: string;
   zipCode?: string;
   country?: string;
+  // Additional fields for EventLocation compatibility
+  geohash?: string;
+  venueId?: string;
 }
 
 export interface EventFormData {
@@ -393,6 +396,7 @@ export interface ApiResponse<T> {
 export interface PaginatedResponse<T> {
   data: T[];
   nextCursor?: string;
+  lastDoc?: unknown;
   hasMore: boolean;
   totalCount?: number;
 }
@@ -428,6 +432,26 @@ export interface EditProfileForm {
   location: Location;
   notificationSettings: NotificationSettings;
   privacySettings: PrivacySettings;
+}
+
+export interface RegisterFormData {
+  email: string;
+  password: string;
+  displayName: string;
+  confirmPassword: string;
+}
+
+export interface LoginFormData {
+  email: string;
+  password: string;
+}
+
+export interface UpdateProfileFormData {
+  displayName?: string;
+  photoURL?: string;
+  phoneNumber?: string;
+  notificationSettings?: Partial<NotificationSettings>;
+  privacySettings?: Partial<PrivacySettings>;
 }
 
 // -----------------------------------------------------------------------------

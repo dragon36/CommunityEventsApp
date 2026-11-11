@@ -2,9 +2,9 @@ import { ExpoConfig, ConfigContext } from 'expo/config';
 import 'dotenv/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => {
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  const isPreview = process.env.APP_VARIANT === 'preview';
-  const isProduction = process.env.APP_VARIANT === 'production';
+  const isDevelopment = process.env['NODE_ENV'] === 'development';
+  const isPreview = process.env['APP_VARIANT'] === 'preview';
+  const isProduction = process.env['APP_VARIANT'] === 'production';
 
   const bundleIdentifier = isProduction
     ? 'com.aroundtown.app'
@@ -39,7 +39,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     updates: {
       fallbackToCacheTimeout: 0,
-      url: isProduction ? undefined : `https://u.expo.dev/${process.env.EXPO_PROJECT_ID}`
+      url: isProduction ? undefined : `https://u.expo.dev/${process.env['EXPO_PROJECT_ID']}`
     },
     runtimeVersion: {
       policy: 'appVersion'
@@ -219,6 +219,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       eas: {
         projectId: process.env['EXPO_PROJECT_ID']
       },
+      // Backend provider: 'firebase' or 'supabase'
+      backendProvider: process.env['EXPO_PUBLIC_BACKEND_PROVIDER'] || 'firebase',
       firebase: {
         apiKey: process.env['EXPO_FIREBASE_API_KEY'],
         authDomain: process.env['EXPO_FIREBASE_AUTH_DOMAIN'],
@@ -227,6 +229,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         messagingSenderId: process.env['EXPO_FIREBASE_MESSAGING_SENDER_ID'],
         appId: process.env['EXPO_FIREBASE_APP_ID'],
         measurementId: process.env['EXPO_FIREBASE_MEASUREMENT_ID']
+      },
+      supabase: {
+        url: process.env['EXPO_PUBLIC_SUPABASE_URL'],
+        anonKey: process.env['EXPO_PUBLIC_SUPABASE_ANON_KEY']
       },
       googleMaps: {
         iosApiKey: process.env['EXPO_IOS_GOOGLE_MAPS_API_KEY'],

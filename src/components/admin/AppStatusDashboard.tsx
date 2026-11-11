@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/components/ui/Card';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import type { AppHealth, AdminStats } from '@/types';
-import { adminService } from '@/services/firebase/firestore';
+import { getDatabaseService } from '@/services/factory';
 
 interface AppStatusDashboardProps {
   health?: AppHealth | null;

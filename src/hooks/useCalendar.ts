@@ -50,7 +50,7 @@ export function useCalendar(): UseCalendarReturn {
 
   const checkPermission = useCallback(async () => {
     try {
-      const { status } = await Calendar.getPermissionsAsync();
+      const { status } = await Calendar.getCalendarPermissionsAsync();
       setPermissionStatus(status);
       if (status === 'granted') {
         await getCalendars();
@@ -135,7 +135,7 @@ export function useCalendar(): UseCalendarReturn {
     try {
       const eventId = await Calendar.createEventAsync(defaultCalendar.id, {
         title: event.title,
-        notes: `${event.description}\n\nEvent Type: ${event.type.replace('_', ' ')}\nLocation: ${event.location.name}\nAddress: ${event.location.address}`,
+        notes: `${event.description}\n\nEvent Type: ${event.type.replace('_', ' ')}\nLocation: ${event.location.venueName || event.location.address}\nAddress: ${event.location.address}`,
         startDate: event.startDate.toDate(),
         endDate: event.endDate.toDate(),
         allDay: false,
@@ -163,7 +163,7 @@ export function useCalendar(): UseCalendarReturn {
     try {
       await Calendar.updateEventAsync(eventId, {
         title: event.title,
-        notes: `${event.description}\n\nEvent Type: ${event.type.replace('_', ' ')}\nLocation: ${event.location.name}\nAddress: ${event.location.address}`,
+        notes: `${event.description}\n\nEvent Type: ${event.type.replace('_', ' ')}\nLocation: ${event.location.venueName || event.location.address}\nAddress: ${event.location.address}`,
         startDate: event.startDate.toDate(),
         endDate: event.endDate.toDate(),
         allDay: false,

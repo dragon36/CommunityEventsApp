@@ -1,40 +1,25 @@
 // =============================================================================
-// COMMUNITY EVENTS APP - AUTH CONTEXT
+// COMMUNITY EVENTS APP - AUTH CONTEXT (Using Factory)
 // =============================================================================
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { auth, initializeFirebase } from '@/services/firebase';
-import {
-  User,
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  sendPasswordResetEmail,
-  sendEmailVerification,
-  updateProfile,
-  deleteUser,
-  reauthenticateWithCredential,
-  EmailAuthProvider,
-  updatePassword,
-  updateEmail,
-  UserCredential,
-} from 'firebase/auth';
-import { api } from '@/services/api';
-import { UserProfile } from '@/types';
+import { initializeServices, getAuthService, getDatabaseService } from '@/services/factory';
+import type { UserProfile } from '@/types';
 import { Alert } from 'react-native';
+import type { AuthUser, AuthSession } from '@/services/interfaces';
 
 // -----------------------------------------------------------------------------
 // TYPES
 // -----------------------------------------------------------------------------
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
   userProfile: UserProfile | null;
+  session: AuthSession | null;
   loading: boolean;
   initializing: boolean;
   error: Error | null;
-  signIn: (email: string, password: string) => Promise<UserCredential>;
-  signUp: (email: string, password: string, displayName: string) => Promise<UserCredential>;
+  signIn: (email: string, password: string) => Promise<FactoryUserCredential>;
+  signUp: (email: string, password: string, displayName: string) => Promise<FactoryUserCredential>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   verifyEmail: () => Promise<void>;
@@ -43,6 +28,12 @@ interface AuthContextType {
   changeEmail: (currentPassword: string, newEmail: string) => Promise<void>;
   deleteAccount: (password: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
+}
+
+// Adapt factory UserCredential to match Firebase UserCredential interface
+interface FactoryUserCredential {
+  user: AuthUser;
+  session: AuthSession;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -55,22 +46,23 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [session, setSession] = useState<AuthSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [initializing, setInitializing] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  // Initialize Firebase and listen to auth state
+  // Initialize services and listen to auth state
   useEffect(() => {
     let mounted = true;
 
     const initAuth = async () => {
       try {
-        initializeFirebase();
+        await initializeServices();
         setInitializing(false);
       } catch (err) {
-        console.error('Firebase init error:', err);
+        console.error('Services init error:', err);
         setInitializing(false);
       }
     };
@@ -78,43 +70,57 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initAuth();
 
     // Listen to auth state changes
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (!mounted) return;
+    let unsubscribe: (() => void) | undefined;
 
-      setUser(firebaseUser);
-      setLoading(true);
+    getAuthService().then((authService) => {
+      unsubscribe = authService.onAuthStateChanged(async (authUser, authSession) => {
+        if (!mounted) return;
 
-      if (firebaseUser) {
-        try {
-          // Fetch user profile
-          const profile = await api.users.getUserProfile(firebaseUser.uid);
-          if (mounted) {
-            setUserProfile(profile);
-            setError(null);
+        setUser(authUser);
+        setSession(authSession);
+        setLoading(true);
+
+        if (authUser) {
+          try {
+            // Fetch user profile
+            const dbService = await getDatabaseService();
+            const profile = await dbService.getUserProfile(authUser.uid);
+            if (mounted) {
+              setUserProfile(profile);
+              setError(null);
+            }
+          } catch (err) {
+            console.error('Failed to fetch user profile:', err);
+            if (mounted) setError(err as Error);
           }
-        } catch (err) {
-          console.error('Failed to fetch user profile:', err);
-          if (mounted) setError(err as Error);
+        } else {
+          if (mounted) setUserProfile(null);
         }
-      } else {
-        if (mounted) setUserProfile(null);
-      }
 
+        if (mounted) setLoading(false);
+      });
+    }).catch((err) => {
+      console.error('Failed to get auth service:', err);
       if (mounted) setLoading(false);
     });
 
     return () => {
       mounted = false;
-      unsubscribe();
+      if (unsubscribe) unsubscribe();
     };
   }, []);
 
   // Sign in with email and password
-  const signIn = async (email: string, password: string): Promise<UserCredential> => {
+  const signIn = async (email: string, password: string): Promise<FactoryUserCredential> => {
     setError(null);
     try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      return result;
+      const authService = await getAuthService();
+      const result = await authService.login({ email, password });
+      // Adapt to FactoryUserCredential interface
+      return {
+        user: result.user,
+        session: result.session,
+      };
     } catch (err) {
       setError(err as Error);
       throw err;
@@ -122,18 +128,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // Sign up with email and password
-  const signUp = async (email: string, password: string, displayName: string): Promise<UserCredential> => {
+  const signUp = async (email: string, password: string, displayName: string): Promise<FactoryUserCredential> => {
     setError(null);
     try {
-      const result = await createUserWithEmailAndPassword(auth, email, password);
-
-      // Update profile with display name
-      await updateProfile(result.user, { displayName });
-
-      // Send email verification
-      await sendEmailVerification(result.user);
-
-      return result;
+      const authService = await getAuthService();
+      const result = await authService.register({ email, password, displayName, confirmPassword: password });
+      return {
+        user: result.user,
+        session: result.session,
+      };
     } catch (err) {
       setError(err as Error);
       throw err;
@@ -144,7 +147,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signOut = async (): Promise<void> => {
     setError(null);
     try {
-      await firebaseSignOut(auth);
+      const authService = await getAuthService();
+      await authService.logout();
     } catch (err) {
       setError(err as Error);
       throw err;
@@ -155,7 +159,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const resetPassword = async (email: string): Promise<void> => {
     setError(null);
     try {
-      await sendPasswordResetEmail(auth, email);
+      const authService = await getAuthService();
+      await authService.sendPasswordReset(email);
     } catch (err) {
       setError(err as Error);
       throw err;
@@ -167,7 +172,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!user) throw new Error('No user logged in');
     setError(null);
     try {
-      await sendEmailVerification(user);
+      const authService = await getAuthService();
+      await authService.sendEmailVerification();
     } catch (err) {
       setError(err as Error);
       throw err;
@@ -179,7 +185,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!user) throw new Error('No user logged in');
     setError(null);
     try {
-      await updateProfile(user, data);
+      const authService = await getAuthService();
+      await authService.updateProfile(data);
       // Refresh profile
       await refreshProfile();
     } catch (err) {
@@ -193,11 +200,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!user || !user.email) throw new Error('No user logged in');
     setError(null);
     try {
-      // Re-authenticate
-      const credential = EmailAuthProvider.credential(user.email, currentPassword);
-      await reauthenticateWithCredential(user, credential);
-      // Update password
-      await updatePassword(user, newPassword);
+      const authService = await getAuthService();
+      await authService.updatePassword(currentPassword, newPassword);
     } catch (err) {
       setError(err as Error);
       throw err;
@@ -209,13 +213,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!user || !user.email) throw new Error('No user logged in');
     setError(null);
     try {
-      // Re-authenticate
-      const credential = EmailAuthProvider.credential(user.email, currentPassword);
-      await reauthenticateWithCredential(user, credential);
-      // Update email
-      await updateEmail(user, newEmail);
+      const authService = await getAuthService();
+      await authService.updateEmail(newEmail, currentPassword);
       // Send verification to new email
-      await sendEmailVerification(user);
+      await authService.sendEmailVerification();
     } catch (err) {
       setError(err as Error);
       throw err;
@@ -227,11 +228,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (!user || !user.email) throw new Error('No user logged in');
     setError(null);
     try {
-      // Re-authenticate
-      const credential = EmailAuthProvider.credential(user.email, password);
-      await reauthenticateWithCredential(user, credential);
-      // Delete user
-      await deleteUser(user);
+      // Note: Account deletion requires backend-specific implementation
+      // For Firebase, we'd use deleteUser; for Supabase, we'd use a different method
+      // This is a placeholder - in production, implement per backend
+      throw new Error('Account deletion not implemented for current backend');
     } catch (err) {
       setError(err as Error);
       throw err;
@@ -242,7 +242,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const refreshProfile = async (): Promise<void> => {
     if (!user) return;
     try {
-      const profile = await api.users.getUserProfile(user.uid);
+      const dbService = await getDatabaseService();
+      const profile = await dbService.getUserProfile(user.uid);
       setUserProfile(profile);
     } catch (err) {
       console.error('Failed to refresh profile:', err);
@@ -252,6 +253,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value: AuthContextType = {
     user,
     userProfile,
+    session,
     loading,
     initializing,
     error,

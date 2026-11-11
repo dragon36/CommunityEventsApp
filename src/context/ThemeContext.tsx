@@ -334,7 +334,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const value: ThemeContextType = {
     colorScheme: effectiveColorScheme as ColorScheme,
     setColorScheme,
-    colors: Colors[effectiveColorScheme as ColorScheme],
+    colors: Colors[effectiveColorScheme as ColorScheme] as ColorPalette,
     spacing: Spacing,
     typography: Typography,
     borderRadius: BorderRadius,
