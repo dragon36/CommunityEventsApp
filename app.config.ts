@@ -7,27 +7,27 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   const isProduction = process.env.APP_VARIANT === 'production';
 
   const bundleIdentifier = isProduction
-    ? 'com.communityevents.app'
+    ? 'com.aroundtown.app'
     : isPreview
-    ? 'com.communityevents.app.preview'
-    : 'com.communityevents.app.dev';
+    ? 'com.aroundtown.app.preview'
+    : 'com.aroundtown.app.dev';
 
   const packageName = isProduction
-    ? 'com.communityevents.app'
+    ? 'com.aroundtown.app'
     : isPreview
-    ? 'com.communityevents.app.preview'
-    : 'com.communityevents.app.dev';
+    ? 'com.aroundtown.app.preview'
+    : 'com.aroundtown.app.dev';
 
   const appName = isProduction
-    ? 'Community Events'
+    ? 'AroundTown'
     : isPreview
-    ? 'Community Events (Preview)'
-    : 'Community Events (Dev)';
+    ? 'AroundTown (Preview)'
+    : 'AroundTown (Dev)';
 
   return {
     ...config,
     name: appName,
-    slug: 'community-events-app',
+    slug: 'aroundtown',
     version: '1.0.0',
     orientation: 'portrait',
     icon: './src/assets/images/icon.png',
@@ -61,7 +61,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         NSFaceIDUsageDescription: 'This app uses Face ID for secure authentication.',
         UIBackgroundModes: ['location', 'fetch', 'remote-notification']
       },
-      associatedDomains: ['applinks:communityevents.app'],
+      associatedDomains: ['applinks:aroundtown.app'],
       googleServicesFile: isProduction ? './GoogleService-Info.plist' : './GoogleService-Info-dev.plist',
       config: {
         googleMapsApiKey: process.env['EXPO_IOS_GOOGLE_MAPS_API_KEY']
@@ -100,10 +100,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           data: [
             {
               scheme: 'https',
-              host: 'communityevents.app'
+              host: 'aroundtown.app'
             },
             {
-              scheme: 'communityevents',
+              scheme: 'aroundtown',
               host: '*'
             }
           ],
