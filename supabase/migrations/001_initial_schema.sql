@@ -7,8 +7,21 @@
 -- =============================================================================
 
 -- Enable required extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE EXTENSION IF NOT EXISTS "postgis";
+
+-- =============================================================================
+-- UTILITY FUNCTIONS (must be defined before triggers that use them)
+-- =============================================================================
+
+-- Function to update updated_at column
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
 -- =============================================================================
 -- PROFILES TABLE (Users)
@@ -84,6 +97,10 @@ CREATE POLICY "Users can view public profiles" ON profiles
 CREATE POLICY "Users can insert their own profile" ON profiles
     FOR INSERT WITH CHECK (auth.uid() = id);
 
+-- Allow auth system to create profiles (for handle_new_user trigger)
+CREATE POLICY "Auth system can create profiles" ON profiles
+    FOR INSERT WITH CHECK (auth.role() = 'supabase_auth_admin');
+
 CREATE POLICY "Users can update their own profile" ON profiles
     FOR UPDATE USING (auth.uid() = id);
 
@@ -107,7 +124,7 @@ CREATE POLICY "Admins can update any profile" ON profiles
 -- CATEGORIES TABLE
 -- =============================================================================
 CREATE TABLE categories (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     slug TEXT NOT NULL UNIQUE,
     icon TEXT,
@@ -146,7 +163,7 @@ CREATE POLICY "Admins can manage categories" ON categories
 -- VENUES TABLE
 -- =============================================================================
 CREATE TABLE venues (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     address TEXT NOT NULL,
     city TEXT NOT NULL,
@@ -201,7 +218,7 @@ CREATE POLICY "Admins can manage all venues" ON venues
 -- EVENTS TABLE
 -- =============================================================================
 CREATE TABLE events (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL,
     description TEXT,
     type TEXT NOT NULL CHECK (type IN ('parade', 'trick_or_treat', 'special_event')),
@@ -324,7 +341,7 @@ CREATE POLICY "Admins can delete any event" ON events
 -- EVENT ATTENDEES TABLE (RSVPs)
 -- =============================================================================
 CREATE TABLE event_attendees (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
     status TEXT NOT NULL CHECK (status IN ('going', 'interested', 'not_going')),
@@ -371,7 +388,7 @@ CREATE POLICY "Organizers can view all attendees" ON event_attendees
 -- EVENT COMMENTS TABLE
 -- =============================================================================
 CREATE TABLE event_comments (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
@@ -444,7 +461,7 @@ CREATE POLICY "Moderators can hide any comment" ON event_comments
 -- FRIENDS TABLE
 -- =============================================================================
 CREATE TABLE friends (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     friend_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined', 'blocked')),
@@ -476,7 +493,7 @@ CREATE POLICY "Users can delete their friendships" ON friends
 -- SAVED EVENTS TABLE
 -- =============================================================================
 CREATE TABLE saved_events (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
     saved_at TIMESTAMPTZ DEFAULT NOW(),
@@ -501,7 +518,7 @@ CREATE POLICY "Users can unsave events" ON saved_events
 -- NOTIFICATIONS TABLE
 -- =============================================================================
 CREATE TABLE notifications (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     type TEXT NOT NULL CHECK (type IN (
         'new_event', 'event_reminder', 'rsvp', 'rsvp_update', 'comment',
@@ -536,7 +553,7 @@ CREATE POLICY "System can create notifications" ON notifications
 -- REPORTS TABLE
 -- =============================================================================
 CREATE TABLE reports (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     target_type TEXT NOT NULL CHECK (target_type IN ('event', 'comment', 'user', 'venue')),
     target_id UUID NOT NULL,
     reporter_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
@@ -582,7 +599,7 @@ CREATE POLICY "Moderators can update reports" ON reports
 -- ANALYTICS EVENTS TABLE
 -- =============================================================================
 CREATE TABLE analytics_events (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
     event_name TEXT NOT NULL,
     parameters JSONB DEFAULT '{}',
@@ -610,7 +627,7 @@ CREATE POLICY "System can insert analytics" ON analytics_events
 -- SEARCH INDEX TABLE
 -- =============================================================================
 CREATE TABLE search_index_events (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     description TEXT,
@@ -661,7 +678,7 @@ CREATE POLICY "System can manage search index" ON search_index_events
 -- DAILY METRICS TABLE
 -- =============================================================================
 CREATE TABLE daily_metrics (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     date DATE NOT NULL UNIQUE,
     new_users INTEGER DEFAULT 0,
     new_events INTEGER DEFAULT 0,
@@ -700,7 +717,7 @@ CREATE POLICY "System can manage daily metrics" ON daily_metrics
 -- ADMIN STATS TABLE
 -- =============================================================================
 CREATE TABLE admin_stats (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     total_users INTEGER DEFAULT 0,
     active_users INTEGER DEFAULT 0,
     pending_events INTEGER DEFAULT 0,
@@ -737,7 +754,7 @@ CREATE POLICY "System can update admin stats" ON admin_stats
 -- APP HEALTH TABLE
 -- =============================================================================
 CREATE TABLE app_health (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     status TEXT DEFAULT 'healthy' CHECK (status IN ('healthy', 'degraded', 'down', 'operational')),
     firestore_status TEXT DEFAULT 'up' CHECK (firestore_status IN ('up', 'down', 'operational', 'degraded', 'outage')),
     auth_status TEXT DEFAULT 'up' CHECK (auth_status IN ('up', 'down', 'operational', 'degraded', 'outage')),
@@ -774,7 +791,7 @@ CREATE POLICY "System can update app health" ON app_health
 -- ADMIN ACTIONS TABLE
 -- =============================================================================
 CREATE TABLE admin_actions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     admin_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     admin_name TEXT,
     action TEXT NOT NULL CHECK (action IN (
@@ -810,7 +827,7 @@ CREATE POLICY "System can insert admin actions" ON admin_actions
 -- NOTIFICATION PREFERENCES TABLE
 -- =============================================================================
 CREATE TABLE notification_preferences (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE UNIQUE,
     push_enabled BOOLEAN DEFAULT TRUE,
     email_enabled BOOLEAN DEFAULT TRUE,
@@ -843,15 +860,6 @@ CREATE POLICY "Users can insert their own preferences" ON notification_preferenc
 -- FUNCTIONS AND TRIGGERS
 -- =============================================================================
 
--- Function to update updated_at column
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
 -- Function to update search_text for search_index_events
 CREATE OR REPLACE FUNCTION update_search_text()
 RETURNS TRIGGER AS $$
@@ -871,7 +879,7 @@ CREATE TRIGGER update_search_index_events_search_text
     EXECUTE FUNCTION update_search_text();
 
 -- Function to generate geohash from coordinates
-CREATE OR REPLACE FUNCTION generate_geohash(lat DOUBLE PRECISION, lon DOUBLE PRECISION, precision INTEGER DEFAULT 7)
+CREATE OR REPLACE FUNCTION generate_geohash(lat DOUBLE PRECISION, lon DOUBLE PRECISION, precision_level INTEGER DEFAULT 7)
 RETURNS TEXT AS $$
 DECLARE
     base32 CONSTANT TEXT := '0123456789bcdefghjkmnpqrstuvwxyz';
@@ -885,7 +893,7 @@ DECLARE
     even BOOLEAN := TRUE;
     mid DOUBLE PRECISION;
 BEGIN
-    WHILE LENGTH(geohash) < precision LOOP
+    WHILE LENGTH(geohash) < precision_level LOOP
         IF even THEN
             mid := (lon_min + lon_max) / 2;
             IF lon > mid THEN
@@ -921,15 +929,19 @@ $$ LANGUAGE plpgsql IMMUTABLE;
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO profiles (id, email, display_name, created_at, updated_at, last_login_at)
-    VALUES (
-        NEW.id,
-        NEW.email,
-        COALESCE(NEW.raw_user_meta_data->>'display_name', NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
-        NOW(),
-        NOW(),
-        NOW()
-    );
+    -- Only create profile if email exists
+    IF NEW.email IS NOT NULL THEN
+        INSERT INTO profiles (id, email, display_name, created_at, updated_at, last_login_at)
+        VALUES (
+            NEW.id,
+            NEW.email,
+            COALESCE(NEW.raw_user_meta_data->>'display_name', NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
+            NOW(),
+            NOW(),
+            NOW()
+        )
+        ON CONFLICT (id) DO NOTHING; -- Handle case where profile already exists
+    END IF;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -1114,7 +1126,7 @@ INSERT INTO categories (name, slug, icon, color, description, "order") VALUES
 ON CONFLICT (slug) DO NOTHING;
 
 -- Insert initial admin stats row
-INSERT INTO admin_stats (id) VALUES (uuid_generate_v4()) ON CONFLICT DO NOTHING;
+INSERT INTO admin_stats (id) VALUES (gen_random_uuid()) ON CONFLICT DO NOTHING;
 
 -- Insert initial app health row
-INSERT INTO app_health (id) VALUES (uuid_generate_v4()) ON CONFLICT DO NOTHING;
+INSERT INTO app_health (id) VALUES (gen_random_uuid()) ON CONFLICT DO NOTHING;
