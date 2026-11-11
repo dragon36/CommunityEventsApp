@@ -1,0 +1,55 @@
+-- =============================================================================
+-- COMMUNITY EVENTS APP - DEVELOPMENT SEED DATA
+-- Migration: 002_seed_data.sql
+-- =============================================================================
+-- Run this after 001_initial_schema.sql for local development
+-- =============================================================================
+
+-- Note: This seed data assumes you have created test users through Supabase Auth
+-- You can create users via the Supabase Dashboard or CLI, then update the UUIDs below
+
+-- Example: Insert test venues (replace UUIDs with actual user IDs after creating users)
+-- INSERT INTO venues (name, address, city, state, country, coordinates, geohash, description, capacity, amenities, created_by) VALUES
+--     ('Central Park', 'Central Park', 'New York', 'NY', 'USA', ST_SetSRID(ST_MakePoint(-73.9654, 40.7829), 4326)::geography, 'dr5reg', 'Iconic urban park', 50000, ARRAY['restrooms', 'playground', 'sports fields'], '00000000-0000-0000-0000-000000000000'),
+--     ('Golden Gate Park', 'Golden Gate Park', 'San Francisco', 'CA', 'USA', ST_SetSRID(ST_MakePoint(-122.4862, 37.7694), 4326)::geography, '9q8yy9', 'Large urban park with museums', 30000, ARRAY['restrooms', 'gardens', 'lakes'], '00000000-0000-0000-0000-000000000000');
+
+-- Example: Insert test events (replace UUIDs with actual user IDs after creating users)
+-- INSERT INTO events (title, description, type, location, start_date, end_date, created_by, category, tags, visibility, status, is_public) VALUES
+--     (
+--         'Community Music Festival',
+--         'Annual community music festival featuring local artists',
+--         'special_event',
+--         '{"address": "Central Park", "city": "New York", "state": "NY", "country": "USA", "coordinates": {"latitude": 40.7829, "longitude": -73.9654}, "geohash": "dr5reg", "venue_name": "Central Park"}',
+--         '2025-06-15 14:00:00+00',
+--         '2025-06-15 22:00:00+00',
+--         '00000000-0000-0000-0000-000000000000',
+--         'music',
+--         ARRAY['festival', 'community', 'free'],
+--         'public',
+--         'approved',
+--         true
+--     ),
+--     (
+--         'Tech Meetup: React Native',
+--         'Monthly React Native developers meetup',
+--         'special_event',
+--         '{"address": "100 Main St", "city": "San Francisco", "state": "CA", "country": "USA", "coordinates": {"latitude": 37.7749, "longitude": -122.4194}, "geohash": "9q8yyk", "venue_name": "Tech Hub SF"}',
+--         '2025-07-10 18:30:00+00',
+--         '2025-07-10 21:00:00+00',
+--         '00000000-0000-0000-0000-000000000000',
+--         'tech',
+--         ARRAY['react-native', 'mobile', 'networking'],
+--         'public',
+--         'approved',
+--         true
+--     );
+
+-- Update admin stats with initial counts (run after seeding data)
+-- UPDATE admin_stats SET
+--     total_users = (SELECT COUNT(*) FROM profiles),
+--     active_users = (SELECT COUNT(*) FROM profiles WHERE is_active = true AND last_login_at > NOW() - INTERVAL '30 days'),
+--     total_events = (SELECT COUNT(*) FROM events),
+--     approved_events = (SELECT COUNT(*) FROM events WHERE status = 'approved'),
+--     pending_events = (SELECT COUNT(*) FROM events WHERE status = 'pending'),
+--     rejected_events = (SELECT COUNT(*) FROM events WHERE status = 'rejected')
+-- WHERE id = (SELECT id FROM admin_stats LIMIT 1);

@@ -49,6 +49,9 @@ community-events-app/
 │   ├── utils/            # Utility functions
 │   ├── constants/        # App constants
 │   └── assets/           # Static assets
+├── supabase/             # Supabase configuration
+│   ├── config.toml       # Supabase CLI config
+│   └── migrations/       # Database migrations (run with `supabase db push`)
 ├── functions/            # Firebase Cloud Functions
 │   ├── src/
 │   │   ├── events/       # Event triggers
