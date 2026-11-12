@@ -14,11 +14,13 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import type { NativeStackNavigationProp, ScreenRouteProp } from '@/navigation/types';
+import type { RootStackParamList } from '@/navigation/types';
 
 export const VerifyEmailScreen = () => {
   const { user, verifyEmail, refreshProfile } = useAuth();
-  const navigation = useNavigation();
-  const route = useRoute<{ params: { email: string } }>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, keyof RootStackParamList>>();
+  const route = useRoute<ScreenRouteProp<RootStackParamList, 'auth/verify-email'>>();
   const { colors, spacing, typography } = useTheme();
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
@@ -56,7 +58,7 @@ export const VerifyEmailScreen = () => {
   };
 
   const handleContinue = () => {
-    navigation.navigate('(app)');
+    navigation.navigate('(app)', undefined);
   };
 
   if (verified) {

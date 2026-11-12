@@ -37,7 +37,8 @@ export function formatDate(date: Date | Timestamp, format: 'short' | 'long' | 't
   };
 
   if (format === 'iso') {
-    return d.toISOString().split('T')[0];
+    const isoString = d.toISOString();
+    return isoString.split('T')[0] || '';
   }
 
   return d.toLocaleDateString('en-US', options[format]);

@@ -3,7 +3,7 @@
 // =============================================================================
 
 import React, { useEffect } from 'react';
-import { Platform, Linking } from 'react-native';
+import { Platform, Linking, View, Text } from 'react-native';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -14,10 +14,6 @@ import { useApp } from '@/context/AppContext';
 import { RootStackParamList, TabParamList, DeepLinkConfig } from './types';
 
 // Import screens
-import { AuthStack } from './AuthStack';
-import { AppTabs } from './AppTabs';
-import { ModalStack } from './ModalStack';
-import { OnboardingStack } from './OnboardingStack';
 import { LoadingScreen } from '@/screens/LoadingScreen';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
@@ -169,10 +165,10 @@ const TabIcon: React.FC<{ name: string; focused: boolean; color: string; size: n
   // In a real app, you'd use a proper icon library like @expo/vector-icons
   // This is a placeholder
   return (
-    <React.View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
-      <React.Text style={{ fontSize: size * 0.8, color }}>{name}</React.Text>
+    <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
+      <Text style={{ fontSize: size * 0.8, color }}>{name}</Text>
       {badge && badge > 0 && (
-        <React.View
+        <View
           style={{
             position: 'absolute',
             top: -4,
@@ -186,12 +182,12 @@ const TabIcon: React.FC<{ name: string; focused: boolean; color: string; size: n
             paddingHorizontal: 4,
           }}
         >
-          <React.Text style={{ color: colors.errorText, fontSize: 10, fontWeight: 'bold' }}>
+          <Text style={{ color: colors.error, fontSize: 10, fontWeight: 'bold' }}>
             {badge > 99 ? '99+' : badge}
-          </React.Text>
-        </React.View>
+          </Text>
+        </View>
       )}
-    </React.View>
+    </View>
   );
 };
 
@@ -205,10 +201,7 @@ export const ModalStack = () => {
         presentation: 'modal',
         animation: 'slide_from_bottom',
         headerShown: false,
-        cardOverlayEnabled: true,
-        cardStyle: { backgroundColor: 'transparent' },
       }}
-      mode="modal"
     >
       <RootStack.Screen name="modal/event-details" component={require('@/screens/modals/EventDetailsModal').EventDetailsModal} />
       <RootStack.Screen name="modal/rsvp" component={require('@/screens/modals/RSVPModal').RSVPModal} />

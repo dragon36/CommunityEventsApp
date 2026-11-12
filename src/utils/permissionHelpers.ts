@@ -7,10 +7,13 @@ import { Alert, Linking, Platform } from 'react-native';
 
 export type PermissionType = 'location' | 'calendar' | 'camera' | 'photos' | 'notifications';
 
+// Use string for status to avoid type conflicts between different expo modules
+export type PermissionStatusValue = 'granted' | 'denied' | 'undetermined' | 'restricted' | 'limited';
+
 export interface PermissionStatus {
   granted: boolean;
   canAskAgain: boolean;
-  status: Location.PermissionStatus | Calendar.PermissionStatus | ImagePicker.PermissionStatus | Notifications.PermissionStatus;
+  status: PermissionStatusValue;
 }
 
 /**
@@ -42,7 +45,7 @@ export async function requestLocationPermission(): Promise<PermissionStatus> {
     };
   } catch (error) {
     console.error('Location permission error:', error);
-    return { granted: false, canAskAgain: false, status: 'denied' };
+    return { granted: false, canAskAgain: false, status: 'denied' as PermissionStatusValue };
   }
 }
 
@@ -59,7 +62,7 @@ export async function requestCalendarPermission(): Promise<PermissionStatus> {
     };
   } catch (error) {
     console.error('Calendar permission error:', error);
-    return { granted: false, canAskAgain: false, status: 'denied' };
+    return { granted: false, canAskAgain: false, status: 'denied' as PermissionStatusValue };
   }
 }
 
@@ -107,17 +110,16 @@ export async function requestNotificationPermission(): Promise<PermissionStatus>
         allowAlert: true,
         allowBadge: true,
         allowSound: true,
-        allowAnnouncements: true,
       },
     });
     return {
       granted: status === 'granted',
       canAskAgain,
-      status,
+      status: status as PermissionStatusValue,
     };
   } catch (error) {
     console.error('Notification permission error:', error);
-    return { granted: false, canAskAgain: false, status: 'denied' };
+    return { granted: false, canAskAgain: false, status: 'denied' as PermissionStatusValue };
   }
 }
 
@@ -129,30 +131,30 @@ export async function checkPermission(type: PermissionType): Promise<PermissionS
     switch (type) {
       case 'location': {
         const { status, canAskAgain } = await Location.getForegroundPermissionsAsync();
-        return { granted: status === 'granted', canAskAgain, status };
+        return { granted: status === 'granted', canAskAgain, status: status as PermissionStatusValue };
       }
       case 'calendar': {
-        const { status, canAskAgain } = await Calendar.getPermissionsAsync();
-        return { granted: status === 'granted', canAskAgain, status };
+        const { status, canAskAgain } = await Calendar.getCalendarPermissionsAsync();
+        return { granted: status === 'granted', canAskAgain, status: status as PermissionStatusValue };
       }
       case 'camera': {
         const { status, canAskAgain } = await ImagePicker.getCameraPermissionsAsync();
-        return { granted: status === 'granted', canAskAgain, status };
+        return { granted: status === 'granted', canAskAgain, status: status as PermissionStatusValue };
       }
       case 'photos': {
         const { status, canAskAgain } = await ImagePicker.getMediaLibraryPermissionsAsync();
-        return { granted: status === 'granted', canAskAgain, status };
+        return { granted: status === 'granted', canAskAgain, status: status as PermissionStatusValue };
       }
       case 'notifications': {
         const { status, canAskAgain } = await Notifications.getPermissionsAsync();
-        return { granted: status === 'granted', canAskAgain, status };
+        return { granted: status === 'granted', canAskAgain, status: status as PermissionStatusValue };
       }
       default:
-        return { granted: false, canAskAgain: false, status: 'denied' };
+        return { granted: false, canAskAgain: false, status: 'denied' as PermissionStatusValue };
     }
   } catch (error) {
     console.error(`Permission check error (${type}):`, error);
-    return { granted: false, canAskAgain: false, status: 'denied' };
+    return { granted: false, canAskAgain: false, status: 'denied' as PermissionStatusValue };
   }
 }
 

@@ -8,13 +8,13 @@ import Constants from 'expo-constants';
 
 // Get Firebase config from Expo Constants (set in app.config.ts extra)
 const firebaseConfig = {
-  apiKey: Constants.expoConfig?.extra?.firebase?.apiKey,
-  authDomain: Constants.expoConfig?.extra?.firebase?.authDomain,
-  projectId: Constants.expoConfig?.extra?.firebase?.projectId,
-  storageBucket: Constants.expoConfig?.extra?.firebase?.storageBucket,
-  messagingSenderId: Constants.expoConfig?.extra?.firebase?.messagingSenderId,
-  appId: Constants.expoConfig?.extra?.firebase?.appId,
-  measurementId: Constants.expoConfig?.extra?.firebase?.measurementId,
+  apiKey: Constants.expoConfig?.extra?.['firebase']?.apiKey,
+  authDomain: Constants.expoConfig?.extra?.['firebase']?.authDomain,
+  projectId: Constants.expoConfig?.extra?.['firebase']?.projectId,
+  storageBucket: Constants.expoConfig?.extra?.['firebase']?.storageBucket,
+  messagingSenderId: Constants.expoConfig?.extra?.['firebase']?.messagingSenderId,
+  appId: Constants.expoConfig?.extra?.['firebase']?.appId,
+  measurementId: Constants.expoConfig?.extra?.['firebase']?.measurementId,
 };
 
 // Validate config
@@ -30,7 +30,7 @@ let app: FirebaseApp;
 if (getApps().length === 0) {
   app = initializeApp(firebaseConfig);
 } else {
-  app = getApps()[0];
+  app = getApps()[0]!;
 }
 
 // Initialize services
@@ -40,7 +40,7 @@ export const storage: FirebaseStorage = getStorage(app);
 export const functions: Functions = getFunctions(app, 'us-central1'); // Adjust region as needed
 
 // Connect to emulators in development
-if (__DEV__ && process.env.EXPO_PUBLIC_USE_EMULATORS === 'true') {
+if (__DEV__ && process.env['EXPO_PUBLIC_USE_EMULATORS'] === 'true') {
   const host = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
 
   try {
@@ -69,7 +69,7 @@ export const isAdminUser = async (uid?: string): Promise<boolean> => {
 
   // Option 1: Check custom claims (set via Cloud Function on user creation)
   const idTokenResult = await auth.currentUser?.getIdTokenResult();
-  if (idTokenResult?.claims?.admin === true) {
+  if (idTokenResult?.claims?.['admin'] === true) {
     return true;
   }
 

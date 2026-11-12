@@ -32,11 +32,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     orientation: 'portrait',
     icon: './src/assets/images/icon.png',
     userInterfaceStyle: 'automatic',
-    splash: {
-      image: './src/assets/images/splash.png',
-      resizeMode: 'contain',
-      backgroundColor: '#ffffff'
-    },
     updates: {
       fallbackToCacheTimeout: 0,
       url: isProduction ? undefined : `https://u.expo.dev/${process.env['EXPO_PROJECT_ID']}`
@@ -117,7 +112,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       output: 'static'
     },
     plugins: [
-      'expo-router',
       'expo-font',
       'expo-secure-store',
       [
@@ -179,15 +173,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         'expo-build-properties',
         {
           ios: {
-            deploymentTarget: '15.0',
+            deploymentTarget: '16.4',
             useFrameworks: 'static'
           },
           android: {
-            compileSdkVersion: 34,
-            targetSdkVersion: 34,
+            compileSdkVersion: 35,
+            targetSdkVersion: 35,
             minSdkVersion: 24,
-            buildToolsVersion: '34.0.0',
-            kotlinVersion: '1.9.20',
+            buildToolsVersion: '35.0.0',
+            kotlinVersion: '2.0.0',
             extraMavenRepos: ['https://maven.google.com'],
             extraProguardRules: '-keep class com.google.firebase.messaging.** { *; }'
           }
@@ -211,16 +205,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         }
       ]
     ],
-    experiments: {
-      typedRoutes: true,
-      tsconfigPaths: true
-    },
     extra: {
       eas: {
         projectId: process.env['EXPO_PROJECT_ID']
       },
       // Backend provider: 'firebase' or 'supabase'
-      backendProvider: process.env['EXPO_PUBLIC_BACKEND_PROVIDER'] || 'firebase',
+      backendProvider: process.env['EXPO_PUBLIC_BACKEND_PROVIDER'] || 'supabase',
       firebase: {
         apiKey: process.env['EXPO_FIREBASE_API_KEY'],
         authDomain: process.env['EXPO_FIREBASE_AUTH_DOMAIN'],

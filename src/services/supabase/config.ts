@@ -7,8 +7,10 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
 // Get Supabase config from Expo Constants (set in app.config.ts extra)
-const supabaseUrl = Constants.expoConfig?.extra?.supabase?.url;
-const supabaseAnonKey = Constants.expoConfig?.extra?.supabase?.anonKey;
+const extra = Constants.expoConfig?.extra as Record<string, unknown> | undefined;
+const supabaseConfig = extra?.['supabase'] as Record<string, string> | undefined;
+const supabaseUrl = supabaseConfig?.['url'];
+const supabaseAnonKey = supabaseConfig?.['anonKey'];
 
 // Validate config
 if (!supabaseUrl || !supabaseAnonKey) {
@@ -37,12 +39,17 @@ export const getCurrentUserId = (): string | null => {
 
 // Helper to check if user is admin (via Supabase JWT claims or profile)
 export const isAdminUser = async (supabaseClient: SupabaseClient, uid?: string): Promise<boolean> => {
-  const userId = uid ?? supabaseClient.auth.getUser().then(({ data }) => data.user?.id);
+  let userId = uid ?? null;
+  if (!userId) {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    userId = user?.id ?? null;
+  }
   if (!userId) return false;
 
   // Option 1: Check custom claims in JWT
   const { data: { session } } = await supabaseClient.auth.getSession();
-  if (session?.user.app_metadata?.role === 'admin') {
+  const appMetadata = session?.user.app_metadata as Record<string, unknown> | undefined;
+  if (appMetadata?.['role'] === 'admin') {
     return true;
   }
 
@@ -53,7 +60,7 @@ export const isAdminUser = async (supabaseClient: SupabaseClient, uid?: string):
     .eq('id', userId)
     .single();
 
-  return profile?.role === 'admin';
+  return profile?.['role'] === 'admin';
 };
 
 // Initialize Supabase (call this early in app startup)

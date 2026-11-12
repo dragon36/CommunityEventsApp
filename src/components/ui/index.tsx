@@ -14,6 +14,8 @@ import {
   Pressable,
   Platform,
 } from 'react-native';
+type TouchableOpacityRef = React.ElementRef<typeof TouchableOpacity>;
+type TextInputRef = React.ElementRef<typeof TextInput>;
 import { useTheme } from '@/context/ThemeContext';
 import { Spacing, BorderRadius, Shadows, Typography } from '@/context/ThemeContext';
 
@@ -144,7 +146,7 @@ const variantTextStyles = {
 // -----------------------------------------------------------------------------
 // BUTTON
 // -----------------------------------------------------------------------------
-export interface ButtonProps extends React.ComponentPropsWithoutRef<typeof TouchableOpacity> {
+export interface ButtonProps {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   fullWidth?: boolean;
@@ -153,9 +155,13 @@ export interface ButtonProps extends React.ComponentPropsWithoutRef<typeof Touch
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   children: React.ReactNode;
+  onPress?: (event?: any) => void;
+  style?: any;
+  testID?: string;
+  accessibilityLabel?: string;
 }
 
-export const Button = forwardRef<TouchableOpacity, ButtonProps>(
+export const Button = forwardRef<TouchableOpacityRef, ButtonProps>(
   (
     {
       variant = 'primary',
@@ -239,7 +245,7 @@ export interface InputProps extends React.ComponentPropsWithoutRef<typeof TextIn
   inputStyle?: any;
 }
 
-export const Input = forwardRef<TextInput, InputProps>(
+export const Input = forwardRef<React.ElementRef<typeof TextInput>, InputProps>(
   (
     {
       label,

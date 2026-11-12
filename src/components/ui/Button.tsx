@@ -1,6 +1,7 @@
 import React, { forwardRef } from 'react';
 import { TouchableOpacity, Text, ActivityIndicator, StyleSheet, View } from 'react-native';
 import type { TouchableOpacityProps, TextStyle, ViewStyle } from 'react-native';
+type TouchableOpacityRef = React.ElementRef<typeof TouchableOpacity>;
 
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 export type ButtonSize = 'small' | 'medium' | 'large';
@@ -58,7 +59,7 @@ const textSizeStyles: Record<ButtonSize, TextStyle> = {
   large: { fontSize: 18, fontWeight: '700' },
 };
 
-export const Button = forwardRef<TouchableOpacity, ButtonProps>(
+export const Button = forwardRef<TouchableOpacityRef, ButtonProps>(
   (
     {
       title,

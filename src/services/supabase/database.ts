@@ -20,12 +20,12 @@ import type {
 import type { DatabaseService } from '../interfaces';
 
 // Helper to convert Supabase timestamps to Date
-function convertTimestamps<T extends Record<string, unknown>>(data: T): T {
+function convertTimestamps(data: Record<string, unknown>): Record<string, unknown> {
   const converted = { ...data };
   for (const key of Object.keys(converted)) {
     const value = converted[key];
     if (value && typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) {
-      converted[key] = new Date(value) as T[keyof T];
+      converted[key] = new Date(value);
     }
   }
   return converted;
@@ -311,7 +311,8 @@ export const supabaseDatabaseAdapter: DatabaseService = {
       throw new Error('Unauthorized to update this event');
     }
 
-    const { status, approvedBy, approvedAt, rejectionReason, ...updateData } = data as Partial<EventFormData>;
+    // Admin-only fields that shouldn't be in updateData
+    const { status, approvedBy, approvedAt, rejectionReason, ...updateData } = data as Partial<EventFormData> & { status?: string; approvedBy?: string; approvedAt?: string; rejectionReason?: string };
 
     const { error } = await supabase
       .from('events')
@@ -542,7 +543,7 @@ export const supabaseDatabaseAdapter: DatabaseService = {
       throw new Error(error.message);
     }
 
-    return convertTimestamps(data) as AdminStats;
+    return convertTimestamps(data) as unknown as AdminStats;
   },
 
   async updateStats(stats: Partial<AdminStats>): Promise<void> {
@@ -569,7 +570,7 @@ export const supabaseDatabaseAdapter: DatabaseService = {
       throw new Error(error.message);
     }
 
-    return convertTimestamps(data) as AppHealth;
+    return convertTimestamps(data) as unknown as AppHealth;
   },
 
   async updateHealth(health: Partial<AppHealth>): Promise<void> {

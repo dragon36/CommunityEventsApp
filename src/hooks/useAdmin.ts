@@ -266,7 +266,7 @@ export function useAdmin(): UseAdminReturn {
       setError(null);
       try {
         const authService = await getAuthService();
-        const currentUser = authService.getCurrentUser();
+        const currentUser = await authService.getCurrentUser();
         if (!currentUser) throw new Error('Not authenticated');
 
         const dbService = await getDatabaseService();
@@ -297,7 +297,7 @@ export function useAdmin(): UseAdminReturn {
       setError(null);
       try {
         const authService = await getAuthService();
-        const currentUser = authService.getCurrentUser();
+        const currentUser = await authService.getCurrentUser();
         if (!currentUser) throw new Error('Not authenticated');
 
         const dbService = await getDatabaseService();
@@ -347,7 +347,7 @@ export function useAdmin(): UseAdminReturn {
       setError(null);
       try {
         const authService = await getAuthService();
-        const currentUser = authService.getCurrentUser();
+        const currentUser = await authService.getCurrentUser();
         if (!currentUser) throw new Error('Not authenticated');
 
         const dbService = await getDatabaseService();
@@ -378,7 +378,7 @@ export function useAdmin(): UseAdminReturn {
       setError(null);
       try {
         const authService = await getAuthService();
-        const currentUser = authService.getCurrentUser();
+        const currentUser = await authService.getCurrentUser();
         if (!currentUser) throw new Error('Not authenticated');
 
         const dbService = await getDatabaseService();
@@ -409,7 +409,7 @@ export function useAdmin(): UseAdminReturn {
       setError(null);
       try {
         const authService = await getAuthService();
-        const currentUser = authService.getCurrentUser();
+        const currentUser = await authService.getCurrentUser();
         if (!currentUser) throw new Error('Not authenticated');
 
         const dbService = await getDatabaseService();

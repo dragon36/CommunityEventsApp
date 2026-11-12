@@ -33,16 +33,9 @@ async function loadFirebaseAdapters(): Promise<Services> {
   if (firebaseAdapters) return firebaseAdapters;
 
   // Dynamic import to avoid loading Firebase if not needed
-  const { firebaseAuthAdapter } = await import('../firebase/auth');
-  const { firebaseDatabaseAdapter } = await import('../firebase/database');
-  const { firebaseStorageAdapter } = await import('../firebase/storage');
+  const { firebaseAdapters: adapters } = await import('../firebase/index');
 
-  firebaseAdapters = {
-    auth: firebaseAuthAdapter,
-    database: firebaseDatabaseAdapter,
-    storage: firebaseStorageAdapter,
-  };
-
+  firebaseAdapters = adapters;
   return firebaseAdapters;
 }
 
@@ -125,7 +118,7 @@ export async function getStorageService() {
 // These return the Firebase adapters as default (will be overridden after init)
 import { firebaseAuthAdapter } from '../firebase/auth';
 import { firebaseDatabaseAdapter } from '../firebase/database';
-import { firebaseStorageAdapter } from '../firebase/storage';
+import { firebaseStorageService as firebaseStorageAdapter } from '../firebase/storage';
 
 export const authService = firebaseAuthAdapter;
 export const databaseService = firebaseDatabaseAdapter;

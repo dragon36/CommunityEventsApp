@@ -224,7 +224,7 @@ export function UserManagementTable({
             <View style={styles.loadingFooter}>
               <Text style={styles.loadingText}>Loading more users...</Text>
             </View>
-          ) : null
+          ) : undefined
         }
         contentContainerStyle={styles.listContent}
       />

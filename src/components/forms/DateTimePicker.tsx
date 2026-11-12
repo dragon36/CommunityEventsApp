@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ViewStyle, TextStyle, Platfor
 import { Ionicons } from '@expo/vector-icons';
 import * as Calendar from 'expo-calendar';
 import RNDateTimePicker from '@react-native-community/datetimepicker';
+import type { ExpoCalendarEvent } from 'expo-calendar';
 
 // ============================================
 // Types
@@ -179,7 +180,7 @@ export function DateTimePicker({
 // ============================================
 
 export interface CalendarEventPickerProps {
-  onAddToCalendar: (event: Calendar.Event) => Promise<void>;
+  onAddToCalendar: (event: ExpoCalendarEvent) => Promise<void>;
   disabled?: boolean;
   style?: ViewStyle;
 }
@@ -239,7 +240,7 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   pickerOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },

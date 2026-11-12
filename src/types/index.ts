@@ -2,10 +2,15 @@
 // COMMUNITY EVENTS APP - TYPE DEFINITIONS
 // =============================================================================
 
+import type { Timestamp, GeoPoint } from 'firebase/firestore';
+
 // -----------------------------------------------------------------------------
 // BASE TYPES (using global.d.ts Firebase types)
 // -----------------------------------------------------------------------------
 // Timestamp, GeoPoint, DocumentReference are declared globally in global.d.ts
+
+// Re-export GeoPoint for compatibility
+export type { GeoPoint };
 
 // -----------------------------------------------------------------------------
 // USER TYPES
@@ -35,7 +40,7 @@ export interface Location {
   city: string;
   state: string;
   country: string;
-  coordinates?: GeoPoint;
+  coordinates?: { latitude: number; longitude: number };
   geohash?: string;
 }
 
@@ -102,11 +107,12 @@ export interface UserProfile {
     refresh_token: string;
     expiry_date: number;
   };
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  lastActiveAt?: Timestamp;
+  createdAt: Date;
+  updatedAt: Date;
+  lastActiveAt?: Date;
   suspended?: boolean;
   suspensionReason?: string;
+  onboardingComplete?: boolean;
 }
 
 // -----------------------------------------------------------------------------
@@ -122,7 +128,7 @@ export interface EventLocation {
   city: string;
   state: string;
   country: string;
-  coordinates: GeoPoint;
+  coordinates: { latitude: number; longitude: number };
   geohash: string;
   venueName?: string;
   venueId?: string;
@@ -133,8 +139,8 @@ export interface Event {
   title: string;
   description: string;
   type: EventType;
-  startDate: Timestamp;
-  endDate: Timestamp;
+  startDate: Date;
+  endDate: Date;
   location: EventLocation;
   organizerId: string;
   coOrganizerIds: string[];
@@ -151,9 +157,9 @@ export interface Event {
   isRecurring: boolean;
   recurrenceRule?: string;
   remindersSent?: string[];
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  cancelledAt?: Timestamp;
+  createdAt: Date;
+  updatedAt: Date;
+  cancelledAt?: Date;
   cancellationReason?: string;
   moderationFlagged?: boolean;
   moderationReason?: string;
@@ -162,7 +168,7 @@ export interface Event {
   images?: string[];
   createdBy?: string;
   approvedBy?: string;
-  approvedAt?: Timestamp;
+  approvedAt?: Date;
   rejectionReason?: string;
   attendeesCount?: number;
 }
@@ -171,9 +177,29 @@ export interface EventAttendee {
   userId: string;
   eventId: string;
   status: RSVPStatus;
-  respondedAt: Timestamp;
-  checkedInAt?: Timestamp;
+  respondedAt: Date;
+  checkedInAt?: Date;
   notificationSent?: boolean;
+}
+
+export interface SearchEventsParams {
+  category?: string;
+  city?: string;
+  state?: string;
+  startDate?: Date;
+  endDate?: Date;
+  query?: string;
+  cursor?: string;
+  limit?: number;
+  radiusKm?: number;
+  center?: { lat: number; lng: number };
+}
+
+export interface SearchEventsResult {
+  events: Event[];
+  hasMore: boolean;
+  nextCursor?: string;
+  totalCount?: number;
 }
 
 export interface EventComment {
@@ -181,8 +207,8 @@ export interface EventComment {
   eventId: string;
   userId: string;
   content: string;
-  createdAt: Timestamp;
-  updatedAt?: Timestamp;
+  createdAt: Date;
+  updatedAt?: Date;
   hidden?: boolean;
   moderationFlagged?: boolean;
   moderationReason?: string;
@@ -210,7 +236,7 @@ export interface Venue {
   city: string;
   state: string;
   country: string;
-  coordinates: GeoPoint;
+  coordinates: { latitude: number; longitude: number };
   geohash: string;
   description?: string;
   capacity?: number;
@@ -220,8 +246,8 @@ export interface Venue {
   phone?: string;
   email?: string;
   createdBy: string;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  createdAt: Date;
+  updatedAt: Date;
   status: 'active' | 'inactive' | 'removed';
 }
 
@@ -251,8 +277,8 @@ export interface Notification {
   body: string;
   data: Record<string, string | number | boolean>;
   read: boolean;
-  readAt?: Timestamp;
-  createdAt: Timestamp;
+  readAt?: Date;
+  createdAt: Date;
 }
 
 // -----------------------------------------------------------------------------
@@ -271,9 +297,9 @@ export interface Report {
   severity: ReportSeverity;
   status: ReportStatus;
   flaggedContent?: string[];
-  resolvedAt?: Timestamp;
+  resolvedAt?: Date;
   resolvedBy?: string;
-  createdAt: Timestamp;
+  createdAt: Date;
 }
 
 // -----------------------------------------------------------------------------
@@ -284,7 +310,7 @@ export interface AnalyticsEvent {
   userId: string;
   eventName: string;
   parameters: Record<string, string | number | boolean>;
-  timestamp: Timestamp;
+  timestamp: Date;
 }
 
 // -----------------------------------------------------------------------------
@@ -297,8 +323,8 @@ export interface Friend {
   userId: string;
   friendId: string;
   status: FriendStatus;
-  requestedAt: Timestamp;
-  respondedAt?: Timestamp;
+  requestedAt: Date;
+  respondedAt?: Date;
 }
 
 // -----------------------------------------------------------------------------
@@ -307,7 +333,7 @@ export interface Friend {
 export interface SavedEvent {
   userId: string;
   eventId: string;
-  savedAt: Timestamp;
+  savedAt: Date;
 }
 
 // -----------------------------------------------------------------------------
@@ -323,13 +349,13 @@ export interface SearchIndexEvent {
   state: string;
   country: string;
   geohash: string;
-  coordinates: GeoPoint;
-  startDate: Timestamp;
-  endDate: Timestamp;
+  coordinates: { latitude: number; longitude: number };
+  startDate: Date;
+  endDate: Date;
   organizerId: string;
   attendeeCount: number;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  createdAt: Date;
+  updatedAt: Date;
   searchText: string;
 }
 
@@ -450,6 +476,8 @@ export interface UpdateProfileFormData {
   displayName?: string;
   photoURL?: string;
   phoneNumber?: string;
+  bio?: string;
+  location?: Location;
   notificationSettings?: Partial<NotificationSettings>;
   privacySettings?: Partial<PrivacySettings>;
 }
@@ -494,8 +522,8 @@ export interface AdminUser {
   role: UserRole;
   isActive: boolean;
   emailVerified: boolean;
-  createdAt: Timestamp;
-  lastLoginAt?: Timestamp;
+  createdAt: Date;
+  lastLoginAt?: Date;
   eventsCreated: number;
   eventsAttending: number;
   suspended?: boolean;
@@ -507,16 +535,16 @@ export interface AdminEvent {
   description: string;
   type: EventType;
   status: EventStatus;
-  startDate: Timestamp;
-  endDate: Timestamp;
+  startDate: Date;
+  endDate: Date;
   location: EventLocation;
   organizerId: string;
   organizerName: string;
   organizerEmail: string;
   creatorName: string;
   attendeeCount: number;
-  createdAt: Timestamp;
-  approvedAt?: Timestamp;
+  createdAt: Date;
+  approvedAt?: Date;
   approvedBy?: string;
   rejectionReason?: string;
   images?: string[];

@@ -68,7 +68,7 @@ export const profileSchema = z.object({
 // Validation helper
 export function validateEmail(email: string): { valid: boolean; message?: string } {
   const result = emailSchema.safeParse(email);
-  return result.success ? { valid: true } : { valid: false, message: result.error.errors[0].message };
+  return result.success ? { valid: true } : { valid: false, message: result.error.errors[0]?.message || 'Invalid email' };
 }
 
 export function validatePassword(password: string): { valid: boolean; message?: string; score: number } {
@@ -93,7 +93,7 @@ export function validatePassword(password: string): { valid: boolean; message?: 
 
 export function validateDisplayName(name: string): { valid: boolean; message?: string } {
   const result = displayNameSchema.safeParse(name);
-  return result.success ? { valid: true } : { valid: false, message: result.error.errors[0].message };
+  return result.success ? { valid: true } : { valid: false, message: result.error.errors[0]?.message || 'Invalid name' };
 }
 
 export function validateEventForm(data: unknown): { valid: boolean; errors?: Record<string, string>; data?: z.infer<typeof eventFormSchema> } {

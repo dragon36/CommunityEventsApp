@@ -83,6 +83,8 @@ CREATE TRIGGER update_profiles_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+-- Ensure table is owned by postgres (required for RLS in some Supabase contexts)
+
 -- Row Level Security
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
@@ -96,10 +98,6 @@ CREATE POLICY "Users can view public profiles" ON profiles
 
 CREATE POLICY "Users can insert their own profile" ON profiles
     FOR INSERT WITH CHECK (auth.uid() = id);
-
--- Allow auth system to create profiles (for handle_new_user trigger)
-CREATE POLICY "Auth system can create profiles" ON profiles
-    FOR INSERT WITH CHECK (auth.role() = 'supabase_auth_admin');
 
 CREATE POLICY "Users can update their own profile" ON profiles
     FOR UPDATE USING (auth.uid() = id);
@@ -145,6 +143,7 @@ CREATE TRIGGER update_categories_updated_at
     BEFORE UPDATE ON categories
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
 
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 
@@ -194,6 +193,7 @@ CREATE TRIGGER update_venues_updated_at
     BEFORE UPDATE ON venues
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
 
 ALTER TABLE venues ENABLE ROW LEVEL SECURITY;
 
@@ -279,6 +279,7 @@ CREATE TRIGGER update_events_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 
 -- Events policies
@@ -355,6 +356,7 @@ CREATE INDEX idx_event_attendees_user_id ON event_attendees(user_id);
 CREATE INDEX idx_event_attendees_event_id ON event_attendees(event_id);
 CREATE INDEX idx_event_attendees_status ON event_attendees(status);
 
+
 ALTER TABLE event_attendees ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view attendees for events they can see" ON event_attendees
@@ -408,6 +410,7 @@ CREATE TRIGGER update_event_comments_updated_at
     BEFORE UPDATE ON event_comments
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
 
 ALTER TABLE event_comments ENABLE ROW LEVEL SECURITY;
 
@@ -475,6 +478,7 @@ CREATE INDEX idx_friends_friend_id ON friends(friend_id);
 CREATE INDEX idx_friends_status ON friends(status);
 CREATE INDEX idx_friends_user_friend ON friends(user_id, friend_id);
 
+
 ALTER TABLE friends ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view their own friendships" ON friends
@@ -502,6 +506,7 @@ CREATE TABLE saved_events (
 
 CREATE INDEX idx_saved_events_user_id ON saved_events(user_id);
 CREATE INDEX idx_saved_events_event_id ON saved_events(event_id);
+
 
 ALTER TABLE saved_events ENABLE ROW LEVEL SECURITY;
 
@@ -538,6 +543,7 @@ CREATE INDEX idx_notifications_read ON notifications(read);
 CREATE INDEX idx_notifications_created_at ON notifications(created_at DESC);
 CREATE INDEX idx_notifications_type ON notifications(type);
 
+
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view their own notifications" ON notifications
@@ -570,6 +576,7 @@ CREATE INDEX idx_reports_target ON reports(target_type, target_id);
 CREATE INDEX idx_reports_reporter_id ON reports(reporter_id);
 CREATE INDEX idx_reports_status ON reports(status);
 CREATE INDEX idx_reports_created_at ON reports(created_at DESC);
+
 
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
 
@@ -609,6 +616,7 @@ CREATE TABLE analytics_events (
 CREATE INDEX idx_analytics_user_id ON analytics_events(user_id);
 CREATE INDEX idx_analytics_event_name ON analytics_events(event_name);
 CREATE INDEX idx_analytics_timestamp ON analytics_events(timestamp DESC);
+
 
 ALTER TABLE analytics_events ENABLE ROW LEVEL SECURITY;
 
@@ -659,6 +667,7 @@ CREATE TRIGGER update_search_index_events_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+
 ALTER TABLE search_index_events ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Anyone can search approved events" ON search_index_events
@@ -700,6 +709,7 @@ CREATE TRIGGER update_daily_metrics_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+
 ALTER TABLE daily_metrics ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can view daily metrics" ON daily_metrics
@@ -736,6 +746,7 @@ CREATE TRIGGER update_admin_stats_updated_at
     BEFORE UPDATE ON admin_stats
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
 
 ALTER TABLE admin_stats ENABLE ROW LEVEL SECURITY;
 
@@ -774,6 +785,7 @@ CREATE TRIGGER update_app_health_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+
 ALTER TABLE app_health ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can view app health" ON app_health
@@ -810,6 +822,7 @@ CREATE INDEX idx_admin_actions_admin_id ON admin_actions(admin_id);
 CREATE INDEX idx_admin_actions_target ON admin_actions(target_type, target_id);
 CREATE INDEX idx_admin_actions_timestamp ON admin_actions(timestamp DESC);
 
+
 ALTER TABLE admin_actions ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins can view admin actions" ON admin_actions
@@ -844,6 +857,7 @@ CREATE TRIGGER update_notification_preferences_updated_at
     BEFORE UPDATE ON notification_preferences
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+
 
 ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;
 
@@ -926,6 +940,7 @@ END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
 -- Trigger to automatically create profile on user signup
+-- SECURITY DEFINER runs as function owner (postgres), bypassing RLS
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -944,7 +959,10 @@ BEGIN
     END IF;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- Ensure function is owned by postgres to bypass RLS
+ALTER FUNCTION handle_new_user() OWNER TO postgres;
 
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users

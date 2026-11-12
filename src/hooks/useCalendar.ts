@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import * as Calendar from 'expo-calendar';
+import type { ExpoCalendar, ExpoCalendarEvent, PermissionResponse } from 'expo-calendar';
 import { Alert, Platform } from 'react-native';
 import type { Event } from '@/types';
 
@@ -9,9 +10,9 @@ import type { Event } from '@/types';
 
 interface UseCalendarReturn {
   // Calendar state
-  calendars: Calendar.Calendar[];
-  defaultCalendar: Calendar.Calendar | null;
-  permissionStatus: Calendar.PermissionStatus | null;
+  calendars: ExpoCalendar[];
+  defaultCalendar: ExpoCalendar | null;
+  permissionStatus: PermissionResponse | null;
   hasPermission: boolean;
 
   // Loading states
@@ -20,7 +21,7 @@ interface UseCalendarReturn {
 
   // Actions
   requestPermission: () => Promise<boolean>;
-  getCalendars: () => Promise<Calendar.Calendar[]>;
+  getCalendars: () => Promise<ExpoCalendar[]>;
   createEventInCalendar: (event: Event) => Promise<string | null>;
   updateEventInCalendar: (eventId: string, event: Event) => Promise<void>;
   deleteEventFromCalendar: (eventId: string) => Promise<void>;
@@ -33,13 +34,13 @@ interface UseCalendarReturn {
 // ============================================
 
 export function useCalendar(): UseCalendarReturn {
-  const [calendars, setCalendars] = useState<Calendar.Calendar[]>([]);
-  const [defaultCalendar, setDefaultCalendar] = useState<Calendar.Calendar | null>(null);
-  const [permissionStatus, setPermissionStatus] = useState<Calendar.PermissionStatus | null>(null);
+  const [calendars, setCalendars] = useState<ExpoCalendar[]>([]);
+  const [defaultCalendar, setDefaultCalendar] = useState<ExpoCalendar | null>(null);
+  const [permissionStatus, setPermissionStatus] = useState<PermissionResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const hasPermission = permissionStatus === 'granted';
+  const hasPermission = permissionStatus?.status === 'granted';
 
   const clearError = useCallback(() => setError(null), []);
 
@@ -50,9 +51,9 @@ export function useCalendar(): UseCalendarReturn {
 
   const checkPermission = useCallback(async () => {
     try {
-      const { status } = await Calendar.getCalendarPermissionsAsync();
+      const status = await Calendar.getCalendarPermissions();
       setPermissionStatus(status);
-      if (status === 'granted') {
+      if (status.status === 'granted') {
         await getCalendars();
       }
     } catch (err) {
@@ -66,10 +67,10 @@ export function useCalendar(): UseCalendarReturn {
     setError(null);
 
     try {
-      const { status } = await Calendar.requestPermissionsAsync();
+      const status = await Calendar.requestCalendarPermissions();
       setPermissionStatus(status);
 
-      if (status === 'granted') {
+      if (status.status === 'granted') {
         await getCalendars();
         return true;
       } else {
@@ -86,20 +87,20 @@ export function useCalendar(): UseCalendarReturn {
   }, []);
 
   // Get available calendars
-  const getCalendars = useCallback(async (): Promise<Calendar.Calendar[]> => {
+  const getCalendars = useCallback(async (): Promise<ExpoCalendar[]> => {
     setLoading(true);
     setError(null);
 
     try {
-      const allCalendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
+      const allCalendars = await Calendar.getCalendars(Calendar.EntityTypes.EVENT);
       const writableCalendars = allCalendars.filter((cal) => cal.allowsModifications);
 
       setCalendars(writableCalendars);
 
       // Find default calendar (prefer local, then iCloud, then first writable)
-      let defaultCal = writableCalendars.find((c) => c.type === Calendar.CalendarType.LOCAL);
+      let defaultCal = writableCalendars.find((c) => c.type === 'local');
       if (!defaultCal) {
-        defaultCal = writableCalendars.find((c) => c.type === Calendar.CalendarType.CALDAV);
+        defaultCal = writableCalendars.find((c) => c.type === 'caldav');
       }
       if (!defaultCal && writableCalendars.length > 0) {
         defaultCal = writableCalendars[0];
@@ -136,8 +137,8 @@ export function useCalendar(): UseCalendarReturn {
       const eventId = await Calendar.createEventAsync(defaultCalendar.id, {
         title: event.title,
         notes: `${event.description}\n\nEvent Type: ${event.type.replace('_', ' ')}\nLocation: ${event.location.venueName || event.location.address}\nAddress: ${event.location.address}`,
-        startDate: event.startDate.toDate(),
-        endDate: event.endDate.toDate(),
+        startDate: new Date(event.startDate),
+        endDate: new Date(event.endDate),
         allDay: false,
         location: event.location.address,
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -164,8 +165,8 @@ export function useCalendar(): UseCalendarReturn {
       await Calendar.updateEventAsync(eventId, {
         title: event.title,
         notes: `${event.description}\n\nEvent Type: ${event.type.replace('_', ' ')}\nLocation: ${event.location.venueName || event.location.address}\nAddress: ${event.location.address}`,
-        startDate: event.startDate.toDate(),
-        endDate: event.endDate.toDate(),
+        startDate: new Date(event.startDate),
+        endDate: new Date(event.endDate),
         allDay: false,
         location: event.location.address,
       });

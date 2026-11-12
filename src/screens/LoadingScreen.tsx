@@ -10,6 +10,32 @@ import { APP_CONFIG } from '@/constants';
 export const LoadingScreen = () => {
   const { colors, spacing } = useTheme();
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: spacing.xl,
+    },
+    logo: {
+      width: 120,
+      height: 120,
+      marginBottom: spacing.lg,
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: '700',
+      marginBottom: spacing.xs,
+    },
+    subtitle: {
+      fontSize: 16,
+      marginBottom: spacing.xl,
+    },
+    spinner: {
+      marginTop: spacing.md,
+    },
+  });
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Image
@@ -23,31 +49,5 @@ export const LoadingScreen = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xl,
-  },
-  logo: {
-    width: 120,
-    height: 120,
-    marginBottom: spacing.lg,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    fontSize: 16,
-    marginBottom: spacing.xl,
-  },
-  spinner: {
-    marginTop: spacing.md,
-  },
-});
 
 export default LoadingScreen;

@@ -50,6 +50,7 @@ export type RootStackParamList = {
   'friends/suggestions': undefined;
 
   // Modals
+  'modal': undefined;
   'modal/event-details': { eventId: string };
   'modal/rsvp': { eventId: string };
   'modal/share': { eventId: string; title: string };
@@ -200,45 +201,39 @@ export interface ScreenOptions {
 
 // Deep link configuration
 export const DeepLinkConfig = {
-  prefixes: ['communityevents://', 'https://communityevents.app'],
+  prefixes: ['communityevents://', 'https://communityevents.app'] as string[],
   config: {
     screens: {
-      '(auth)': {
-        screens: {
-          'auth/login': 'login',
-          'auth/register': 'register',
-          'auth/forgot-password': 'forgot-password',
-          'auth/verify-email': 'verify-email',
-        },
-      },
-      '(app)': {
-        screens: {
-          '(tabs)': {
-            screens: {
-              home: 'events',
-              map: 'map',
-              search: 'search',
-              saved: 'saved',
-              profile: 'profile',
-            },
-          },
-          'events/[id]': 'events/:id',
-          'events/create': 'events/create',
-          'events/edit': 'events/edit/:id',
-          'profile': 'profile/:userId?',
-          'profile/edit': 'profile/edit',
-          'settings': 'settings',
-          'settings/account': 'settings/account',
-          'settings/notifications': 'settings/notifications',
-          'settings/privacy': 'settings/privacy',
-          'settings/appearance': 'settings/appearance',
-          'friends': 'friends',
-          'friends/requests': 'friends/requests',
-          'modal/event-details': 'events/:id',
-          'modal/rsvp': 'events/:id/rsvp',
-          'modal/share': 'events/:id/share',
-        },
-      },
+      // Auth screens
+      'auth/login': 'login',
+      'auth/register': 'register',
+      'auth/forgot-password': 'forgot-password',
+      'auth/verify-email': 'verify-email',
+      // Main app tabs
+      home: 'events',
+      map: 'map',
+      search: 'search',
+      saved: 'saved',
+      profile: 'profile',
+      // Event screens
+      'events/[id]': 'events/:id',
+      'events/create': 'events/create',
+      'events/edit': 'events/edit/:id',
+      // Profile screens
+      'profile/edit': 'profile/edit',
+      // Settings screens
+      'settings': 'settings',
+      'settings/account': 'settings/account',
+      'settings/notifications': 'settings/notifications',
+      'settings/privacy': 'settings/privacy',
+      'settings/appearance': 'settings/appearance',
+      // Friends screens
+      'friends': 'friends',
+      'friends/requests': 'friends/requests',
+      // Modal screens
+      'modal/event-details': 'events/:id',
+      'modal/rsvp': 'events/:id/rsvp',
+      'modal/share': 'events/:id/share',
     },
   },
 } as const;

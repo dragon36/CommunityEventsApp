@@ -10,9 +10,9 @@ const PLACE_DETAILS_FIELDS = 'place_id,name,formatted_address,geometry,types,add
 
 // Get API key from Expo Constants
 const getApiKey = (): string => {
-  return Constants.expoConfig?.extra?.googlePlaces?.iosApiKey ||
-         Constants.expoConfig?.extra?.googlePlaces?.androidApiKey ||
-         process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY ||
+  return Constants.expoConfig?.extra?.['googlePlaces']?.iosApiKey ||
+         Constants.expoConfig?.extra?.['googlePlaces']?.androidApiKey ||
+         process.env['EXPO_PUBLIC_GOOGLE_PLACES_API_KEY'] ||
          '';
 };
 

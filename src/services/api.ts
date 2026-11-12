@@ -2,10 +2,15 @@
 // COMMUNITY EVENTS APP - API SERVICE
 // =============================================================================
 
-import { getFunctionsInstance, collections, subCollections } from './firebase';
-import { httpsCallable, CallableFunction } from 'firebase/functions';
 import {
+  getFunctionsInstance,
   getFirestoreInstance,
+  getAuthInstance,
+  collections,
+  subCollections,
+  callableFunctions,
+} from './firebase';
+import {
   collection,
   query,
   where,
@@ -18,14 +23,17 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  setDoc,
   writeBatch,
   serverTimestamp,
   Timestamp,
   DocumentSnapshot,
   QueryDocumentSnapshot,
   GeoPoint,
+  FieldValue,
+  arrayRemove,
+  arrayUnion,
 } from 'firebase/firestore';
-import { getAuthInstance } from './firebase';
 import {
   Event,
   EventAttendee,
@@ -66,38 +74,39 @@ const mapEventDoc = (doc: DocumentSnapshot | QueryDocumentSnapshot): Event => {
   const data = doc.data()!;
   return {
     id: doc.id,
-    title: data.title,
-    description: data.description,
-    startDate: convertTimestamp(data.startDate)!,
-    endDate: convertTimestamp(data.endDate)!,
+    type: data['type'] || 'special_event',
+    title: data['title'],
+    description: data['description'],
+    startDate: convertTimestamp(data['startDate'])!,
+    endDate: convertTimestamp(data['endDate'])!,
     location: {
-      ...data.location,
+      ...data['location'],
       coordinates: new GeoPoint(
-        data.location.coordinates.latitude,
-        data.location.coordinates.longitude
+        data['location'].coordinates.latitude,
+        data['location'].coordinates.longitude
       ),
     },
-    organizerId: data.organizerId,
-    coOrganizerIds: data.coOrganizerIds || [],
-    category: data.category,
-    tags: data.tags || [],
-    visibility: data.visibility,
-    status: data.status || 'published',
-    attendeeIds: data.attendeeIds || [],
-    maxAttendees: data.maxAttendees,
-    coverImageUrls: data.coverImageUrls,
-    coverImageOriginal: data.coverImageOriginal,
-    galleryImages: data.galleryImages,
-    googleCalendarEventId: data.googleCalendarEventId,
-    isRecurring: data.isRecurring || false,
-    recurrenceRule: data.recurrenceRule,
-    remindersSent: data.remindersSent,
-    createdAt: convertTimestamp(data.createdAt)!,
-    updatedAt: convertTimestamp(data.updatedAt)!,
-    cancelledAt: convertTimestamp(data.cancelledAt),
-    cancellationReason: data.cancellationReason,
-    moderationFlagged: data.moderationFlagged,
-    moderationReason: data.moderationReason,
+    organizerId: data['organizerId'],
+    coOrganizerIds: data['coOrganizerIds'] || [],
+    category: data['category'],
+    tags: data['tags'] || [],
+    visibility: data['visibility'],
+    status: data['status'] || 'published',
+    attendeeIds: data['attendeeIds'] || [],
+    maxAttendees: data['maxAttendees'],
+    coverImageUrls: data['coverImageUrls'],
+    coverImageOriginal: data['coverImageOriginal'],
+    galleryImages: data['galleryImages'],
+    googleCalendarEventId: data['googleCalendarEventId'],
+    isRecurring: data['isRecurring'] || false,
+    recurrenceRule: data['recurrenceRule'],
+    remindersSent: data['remindersSent'],
+    createdAt: convertTimestamp(data['createdAt'])!,
+    updatedAt: convertTimestamp(data['updatedAt'])!,
+    cancelledAt: convertTimestamp(data['cancelledAt']),
+    cancellationReason: data['cancellationReason'],
+    moderationFlagged: data['moderationFlagged'],
+    moderationReason: data['moderationReason'],
   };
 };
 
@@ -105,25 +114,25 @@ const mapUserDoc = (doc: DocumentSnapshot | QueryDocumentSnapshot): UserProfile 
   const data = doc.data()!;
   return {
     uid: doc.id,
-    displayName: data.displayName,
-    email: data.email,
-    photoURL: data.photoURL,
-    bio: data.bio,
-    location: data.location,
-    notificationSettings: data.notificationSettings,
-    privacySettings: data.privacySettings,
-    role: data.role || 'user',
-    followerIds: data.followerIds || [],
-    followingIds: data.followingIds || [],
-    savedEventIds: data.savedEventIds || [],
-    interestedCategories: data.interestedCategories,
-    fcmToken: data.fcmToken,
-    googleCalendarTokens: data.googleCalendarTokens,
-    createdAt: convertTimestamp(data.createdAt)!,
-    updatedAt: convertTimestamp(data.updatedAt)!,
-    lastActiveAt: convertTimestamp(data.lastActiveAt),
-    suspended: data.suspended,
-    suspensionReason: data.suspensionReason,
+    displayName: data['displayName'],
+    email: data['email'],
+    photoURL: data['photoURL'],
+    bio: data['bio'],
+    location: data['location'],
+    notificationSettings: data['notificationSettings'],
+    privacySettings: data['privacySettings'],
+    role: data['role'] || 'user',
+    followerIds: data['followerIds'] || [],
+    followingIds: data['followingIds'] || [],
+    savedEventIds: data['savedEventIds'] || [],
+    interestedCategories: data['interestedCategories'],
+    fcmToken: data['fcmToken'],
+    googleCalendarTokens: data['googleCalendarTokens'],
+    createdAt: convertTimestamp(data['createdAt'])!,
+    updatedAt: convertTimestamp(data['updatedAt'])!,
+    lastActiveAt: convertTimestamp(data['lastActiveAt']),
+    suspended: data['suspended'],
+    suspensionReason: data['suspensionReason'],
   };
 };
 
@@ -133,9 +142,9 @@ const mapUserDoc = (doc: DocumentSnapshot | QueryDocumentSnapshot): UserProfile 
 export const eventsApi = {
   // Get a single event by ID
   async getEvent(eventId: string): Promise<Event | null> {
-    const doc = await getDoc(doc(db, 'events', eventId));
-    if (!doc.exists()) return null;
-    return mapEventDoc(doc);
+    const eventDoc = await getDoc(doc(db, 'events', eventId));
+    if (!eventDoc.exists()) return null;
+    return mapEventDoc(eventDoc);
   },
 
   // Get multiple events by IDs
@@ -164,8 +173,8 @@ export const eventsApi = {
       state,
       startDate,
       endDate,
-      location,
-      radius = 50,
+      center,
+      radiusKm = 50,
       limit: limitCount = 20,
       cursor,
     } = params;
@@ -204,7 +213,7 @@ export const eventsApi = {
     const snapshot = await getDocs(q);
     const events = snapshot.docs.slice(0, limitCount).map(mapEventDoc);
     const hasMore = snapshot.docs.length > limitCount;
-    const nextCursor = hasMore ? snapshot.docs[limitCount - 1].id : undefined;
+    const nextCursor = hasMore && snapshot.docs[limitCount] ? snapshot.docs[limitCount].id : undefined;
 
     return { events, nextCursor, hasMore };
   },
@@ -218,8 +227,8 @@ export const eventsApi = {
   ): Promise<Event[]> {
     // This would use the geohash index - simplified for now
     return this.searchEvents({
-      location: { latitude, longitude },
-      radius: radiusKm,
+      center: { lat: latitude, lng: longitude },
+      radiusKm,
       limit: limitCount,
     }).then(r => r.events);
   },
@@ -277,7 +286,6 @@ export const eventsApi = {
       maxAttendees: data.maxAttendees,
       isRecurring: data.isRecurring,
       recurrenceRule: data.recurrenceRule,
-      tags: data.tags,
       createdAt: now,
       updatedAt: now,
     };
@@ -293,23 +301,23 @@ export const eventsApi = {
       updatedAt: serverTimestamp(),
     };
 
-    if (data.title) updateData.title = data.title;
-    if (data.description) updateData.description = data.description;
-    if (data.startDate) updateData.startDate = convertToTimestamp(data.startDate);
-    if (data.endDate) updateData.endDate = convertToTimestamp(data.endDate);
-    if (data.location) {
-      updateData.location = {
-        ...data.location,
+    if (data['title']) updateData['title'] = data['title'];
+    if (data['description']) updateData['description'] = data['description'];
+    if (data['startDate']) updateData['startDate'] = convertToTimestamp(data['startDate']);
+    if (data['endDate']) updateData['endDate'] = convertToTimestamp(data['endDate']);
+    if (data['location']) {
+      updateData['location'] = {
+        ...data['location'],
         coordinates: new GeoPoint(
-          data.location.coordinates.latitude,
-          data.location.coordinates.longitude
+          data['location'].coordinates.latitude,
+          data['location'].coordinates.longitude
         ),
       };
     }
-    if (data.category) updateData.category = data.category;
-    if (data.tags) updateData.tags = data.tags;
-    if (data.visibility) updateData.visibility = data.visibility;
-    if (data.maxAttendees !== undefined) updateData.maxAttendees = data.maxAttendees;
+    if (data['category']) updateData['category'] = data['category'];
+    if (data['tags']) updateData['tags'] = data['tags'];
+    if (data['visibility']) updateData['visibility'] = data['visibility'];
+    if (data['maxAttendees'] !== undefined) updateData['maxAttendees'] = data['maxAttendees'];
 
     await updateDoc(eventRef, updateData);
   },
@@ -326,11 +334,12 @@ export const eventsApi = {
 
     const batch = writeBatch(db);
     const eventRef = doc(db, 'events', eventId);
-    const attendeeRef = doc(eventRef.collection('attendees'), userId);
+    const attendeeRef = doc(collection(db, 'events', eventId, 'attendees'), userId);
 
     // Check current RSVP
     const attendeeDoc = await getDoc(attendeeRef);
-    const previousStatus = attendeeDoc.exists() ? attendeeDoc.data()?.status : null;
+    const data = attendeeDoc.data();
+    const previousStatus = data ? data['status'] : null;
 
     // Update attendee record
     batch.set(attendeeRef, {
@@ -343,11 +352,11 @@ export const eventsApi = {
     // Update event attendee list
     if (previousStatus === 'going' && status !== 'going') {
       batch.update(eventRef, {
-        attendeeIds: admin.firestore.FieldValue.arrayRemove(userId),
+        attendeeIds: arrayRemove(userId),
       });
     } else if (previousStatus !== 'going' && status === 'going') {
       batch.update(eventRef, {
-        attendeeIds: admin.firestore.FieldValue.arrayUnion(userId),
+        attendeeIds: arrayUnion(userId),
       });
     }
 
@@ -364,11 +373,11 @@ export const eventsApi = {
 
     const data = attendeeDoc.data()!;
     return {
-      userId: data.userId,
-      eventId: data.eventId,
-      status: data.status,
-      respondedAt: convertTimestamp(data.respondedAt)!,
-      checkedInAt: convertTimestamp(data.checkedInAt),
+      userId: data['userId'],
+      eventId: data['eventId'],
+      status: data['status'],
+      respondedAt: convertTimestamp(data['respondedAt'])!,
+      checkedInAt: convertTimestamp(data['checkedInAt']),
     };
   },
 
@@ -385,11 +394,11 @@ export const eventsApi = {
     return snapshot.docs.map(doc => {
       const data = doc.data();
       return {
-        userId: data.userId,
-        eventId: data.eventId,
-        status: data.status,
-        respondedAt: convertTimestamp(data.respondedAt)!,
-        checkedInAt: convertTimestamp(data.checkedInAt),
+        userId: data['userId'],
+        eventId: data['eventId'],
+        status: data['status'],
+        respondedAt: convertTimestamp(data['respondedAt'])!,
+        checkedInAt: convertTimestamp(data['checkedInAt']),
       };
     });
   },
@@ -442,9 +451,9 @@ export const eventsApi = {
 export const usersApi = {
   // Get user profile
   async getUserProfile(userId: string): Promise<UserProfile | null> {
-    const doc = await getDoc(doc(db, 'users', userId));
-    if (!doc.exists()) return null;
-    return mapUserDoc(doc);
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    if (!userDoc.exists()) return null;
+    return mapUserDoc(userDoc);
   },
 
   // Get current user profile
@@ -464,22 +473,22 @@ export const usersApi = {
       updatedAt: serverTimestamp(),
     };
 
-    if (data.displayName) updateData.displayName = data.displayName;
-    if (data.bio !== undefined) updateData.bio = data.bio;
-    if (data.location) updateData.location = data.location;
-    if (data.notificationSettings) updateData.notificationSettings = data.notificationSettings;
-    if (data.privacySettings) updateData.privacySettings = data.privacySettings;
+    if (data['displayName']) updateData['displayName'] = data['displayName'];
+    if (data['bio'] !== undefined) updateData['bio'] = data['bio'];
+    if (data['location']) updateData['location'] = data['location'];
+    if (data['notificationSettings']) updateData['notificationSettings'] = data['notificationSettings'];
+    if (data['privacySettings']) updateData['privacySettings'] = data['privacySettings'];
 
     await updateDoc(userRef, updateData);
   },
 
   // Search users
-  async searchUsers(query: string, limitCount: number = 20): Promise<UserProfile[]> {
+  async searchUsers(searchQuery: string, limitCount: number = 20): Promise<UserProfile[]> {
     // This would need a search index - simplified
     const q = query(
       collection(db, 'users'),
-      where('displayName', '>=', query),
-      where('displayName', '<=', query + ''),
+      where('displayName', '>=', searchQuery),
+      where('displayName', '<=', searchQuery + ''),
       limit(limitCount)
     );
     const snapshot = await getDocs(q);
@@ -497,21 +506,21 @@ export const usersApi = {
     const targetRef = doc(db, 'users', targetUserId);
 
     const userDoc = await getDoc(userRef);
-    const isFollowing = userDoc.data()?.followingIds?.includes(targetUserId) || false;
+    const isFollowing = userDoc.data()?.['followingIds']?.includes(targetUserId) || false;
 
     if (isFollowing) {
       batch.update(userRef, {
-        followingIds: admin.firestore.FieldValue.arrayRemove(targetUserId),
+        followingIds: arrayRemove(targetUserId),
       });
       batch.update(targetRef, {
-        followerIds: admin.firestore.FieldValue.arrayRemove(userId),
+        followerIds: arrayRemove(userId),
       });
     } else {
       batch.update(userRef, {
-        followingIds: admin.firestore.FieldValue.arrayUnion(targetUserId),
+        followingIds: arrayUnion(targetUserId),
       });
       batch.update(targetRef, {
-        followerIds: admin.firestore.FieldValue.arrayUnion(userId),
+        followerIds: arrayUnion(userId),
       });
     }
 
@@ -522,14 +531,14 @@ export const usersApi = {
   // Get followers
   async getFollowers(userId: string, limitCount: number = 50): Promise<UserProfile[]> {
     const userDoc = await getDoc(doc(db, 'users', userId));
-    const followerIds = userDoc.data()?.followerIds || [];
+    const followerIds = userDoc.data()?.['followerIds'] || [];
     return this.getUsers(followerIds.slice(0, limitCount));
   },
 
   // Get following
   async getFollowing(userId: string, limitCount: number = 50): Promise<UserProfile[]> {
     const userDoc = await getDoc(doc(db, 'users', userId));
-    const followingIds = userDoc.data()?.followingIds || [];
+    const followingIds = userDoc.data()?.['followingIds'] || [];
     return this.getUsers(followingIds.slice(0, limitCount));
   },
 
@@ -569,9 +578,9 @@ export const categoriesApi = {
   },
 
   async getCategory(categoryId: string): Promise<Category | null> {
-    const doc = await getDoc(doc(db, 'categories', categoryId));
-    if (!doc.exists()) return null;
-    return { id: doc.id, ...doc.data() } as Category;
+    const categoryDoc = await getDoc(doc(db, 'categories', categoryId));
+    if (!categoryDoc.exists()) return null;
+    return { id: categoryDoc.id, ...categoryDoc.data() } as Category;
   },
 };
 
@@ -579,7 +588,7 @@ export const categoriesApi = {
 // VENUES API
 // -----------------------------------------------------------------------------
 export const venuesApi = {
-  async searchVenues(query: string, location?: { latitude: number; longitude: number }): Promise<Venue[]> {
+  async searchVenues(searchQuery: string, location?: { latitude: number; longitude: number }): Promise<Venue[]> {
     // Simplified - would use geohash for location-based search
     const q = query(
       collection(db, 'venues'),
@@ -587,13 +596,13 @@ export const venuesApi = {
       limit(20)
     );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Venue));
+    return snapshot.docs.map(venueDoc => ({ id: venueDoc.id, ...venueDoc.data() } as Venue));
   },
 
   async getVenue(venueId: string): Promise<Venue | null> {
-    const doc = await getDoc(doc(db, 'venues', venueId));
-    if (!doc.exists()) return null;
-    return { id: doc.id, ...doc.data() } as Venue;
+    const venueDoc = await getDoc(doc(db, 'venues', venueId));
+    if (!venueDoc.exists()) return null;
+    return { id: venueDoc.id, ...venueDoc.data() } as Venue;
   },
 };
 
@@ -620,15 +629,18 @@ export const notificationsApi = {
     }
 
     const snapshot = await getDocs(q);
-    const notifications = snapshot.docs.slice(0, limitCount).map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: convertTimestamp(doc.data().createdAt)!,
-      readAt: convertTimestamp(doc.data().readAt),
-    } as Notification));
+    const notifications = snapshot.docs.slice(0, limitCount).map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        createdAt: convertTimestamp(data['createdAt'])!,
+        readAt: convertTimestamp(data['readAt']),
+      } as Notification;
+    });
 
     const hasMore = snapshot.docs.length > limitCount;
-    const nextCursor = hasMore ? snapshot.docs[limitCount - 1].id : undefined;
+    const nextCursor = hasMore && snapshot.docs[limitCount] ? snapshot.docs[limitCount].id : undefined;
 
     return { data: notifications, nextCursor, hasMore };
   },
@@ -696,18 +708,18 @@ export const commentsApi = {
       return {
         id: doc.id,
         eventId,
-        userId: data.userId,
-        content: data.content,
-        createdAt: convertTimestamp(data.createdAt)!,
-        updatedAt: convertTimestamp(data.updatedAt),
-        hidden: data.hidden,
-        moderationFlagged: data.moderationFlagged,
-        moderationReason: data.moderationReason,
+        userId: data['userId'],
+        content: data['content'],
+        createdAt: convertTimestamp(data['createdAt'])!,
+        updatedAt: convertTimestamp(data['updatedAt']),
+        hidden: data['hidden'],
+        moderationFlagged: data['moderationFlagged'],
+        moderationReason: data['moderationReason'],
       };
     });
 
     const hasMore = snapshot.docs.length > limitCount;
-    const nextCursor = hasMore ? snapshot.docs[limitCount - 1].id : undefined;
+    const nextCursor = hasMore && snapshot.docs[limitCount] ? snapshot.docs[limitCount].id : undefined;
 
     return { data: comments, nextCursor, hasMore };
   },
@@ -763,10 +775,6 @@ export const reportsApi = {
     return reportRef.id;
   },
 };
-
-// Need to import admin for FieldValue
-import * as admin from 'firebase-admin';
-import { setDoc } from 'firebase/firestore';
 
 // Export all APIs
 export const api = {

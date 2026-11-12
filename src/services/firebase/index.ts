@@ -23,7 +23,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { userService, eventService, adminService, calculateDistance } from '../firebase/firestore';
-import { storageService, UploadProgress, UploadResult, ImageUploadOptions } from '../firebase/storage';
+import { firebaseStorageService as storageService } from './storage';
 import type {
   RegisterFormData,
   LoginFormData,
@@ -41,7 +41,7 @@ import type {
   PaginatedResponse,
   LocationData,
 } from '@/types';
-import type { AuthService, AuthUser, AuthSession, PasswordValidationResult, DatabaseService, StorageService } from './interfaces';
+import type { AuthService, AuthUser, AuthSession, PasswordValidationResult, DatabaseService, StorageService } from '../interfaces';
 
 // ============================================
 // FIREBASE AUTH ADAPTER
@@ -57,8 +57,8 @@ function convertFirebaseUser(firebaseUser: FirebaseUser): AuthUser {
     emailVerified: firebaseUser.emailVerified,
     isAnonymous: firebaseUser.isAnonymous,
     metadata: {
-      creationTime: firebaseUser.metadata.creationTime,
-      lastSignInTime: firebaseUser.metadata.lastSignInTime,
+      creationTime: firebaseUser.metadata.creationTime || '',
+      lastSignInTime: firebaseUser.metadata.lastSignInTime || '',
     },
   };
 }
@@ -73,6 +73,18 @@ function convertAuthSession(userCredential: { user: FirebaseUser }): AuthSession
     expiresIn: 3600,
     tokenType: 'Bearer',
     user: convertFirebaseUser(userCredential.user),
+  };
+}
+
+// Get session from user (helper)
+async function getSessionFromUser(firebaseUser: FirebaseUser): Promise<AuthSession> {
+  const accessToken = await firebaseUser.getIdToken();
+  return {
+    accessToken,
+    refreshToken: '', // Not available in client SDK
+    expiresIn: 3600,
+    tokenType: 'Bearer',
+    user: convertFirebaseUser(firebaseUser),
   };
 }
 
@@ -103,7 +115,7 @@ export const firebaseAuthAdapter: AuthService = {
     });
 
     const user = convertFirebaseUser(userCredential.user);
-    const session = await this.getSessionFromUser(userCredential.user);
+    const session = await getSessionFromUser(userCredential.user);
 
     return { user, session };
   },
@@ -115,7 +127,7 @@ export const firebaseAuthAdapter: AuthService = {
     await userService.updateLastLogin(userCredential.user.uid);
 
     const user = convertFirebaseUser(userCredential.user);
-    const session = await this.getSessionFromUser(userCredential.user);
+    const session = await getSessionFromUser(userCredential.user);
 
     return { user, session };
   },
@@ -157,8 +169,16 @@ export const firebaseAuthAdapter: AuthService = {
       await firebaseUpdateProfile(user, updates);
     }
 
-    // Update Firestore profile
-    await userService.updateUserProfile(user.uid, data);
+    // Update Firestore profile - convert UpdateProfileFormData to Partial<UserProfile>
+    const profileUpdates: Partial<UserProfile> = {};
+    if (data.displayName) profileUpdates.displayName = data.displayName;
+    if (data.photoURL) profileUpdates.photoURL = data.photoURL;
+    if (data.bio !== undefined) profileUpdates.bio = data.bio;
+    if (data.location) profileUpdates.location = data.location;
+    if (data.notificationSettings) profileUpdates.notificationSettings = data.notificationSettings as any;
+    if (data.privacySettings) profileUpdates.privacySettings = data.privacySettings as any;
+
+    await userService.updateUserProfile(user.uid, profileUpdates);
   },
 
   // Update email
@@ -196,13 +216,13 @@ export const firebaseAuthAdapter: AuthService = {
   },
 
   // Get current user
-  getCurrentUser(): AuthUser | null {
+  async getCurrentUser(): Promise<AuthUser | null> {
     const user = auth.currentUser;
     return user ? convertFirebaseUser(user) : null;
   },
 
   // Get current session
-  getCurrentSession(): AuthSession | null {
+  async getCurrentSession(): Promise<AuthSession | null> {
     const user = auth.currentUser;
     if (!user) return null;
     // This is a synchronous approximation - real session would be async
@@ -222,7 +242,7 @@ export const firebaseAuthAdapter: AuthService = {
 
     try {
       const idTokenResult = await user.getIdTokenResult();
-      return idTokenResult.claims.admin === true;
+      return idTokenResult.claims['admin'] === true;
     } catch {
       return false;
     }
@@ -240,24 +260,12 @@ export const firebaseAuthAdapter: AuthService = {
     return firebaseOnAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const user = convertFirebaseUser(firebaseUser);
-        const session = await this.getSessionFromUser(firebaseUser);
+        const session = await getSessionFromUser(firebaseUser);
         callback(user, session);
       } else {
         callback(null, null);
       }
     });
-  },
-
-  // Get session from user (helper)
-  async getSessionFromUser(firebaseUser: FirebaseUser): Promise<AuthSession> {
-    const accessToken = await firebaseUser.getIdToken();
-    return {
-      accessToken,
-      refreshToken: '', // Not available in client SDK
-      expiresIn: 3600,
-      tokenType: 'Bearer',
-      user: convertFirebaseUser(firebaseUser),
-    };
   },
 
   // Password Validation (shared with existing implementation)
@@ -293,13 +301,13 @@ export const firebaseAuthAdapter: AuthService = {
   },
 
   getPasswordStrengthLabel(score: number): string {
-    const labels = ['Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
-    return labels[Math.min(score, 4)];
+    const labels: readonly string[] = ['Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
+    return labels[Math.min(score, 4)] ?? 'Very Weak';
   },
 
   getPasswordStrengthColor(score: number): string {
-    const colors = ['#E71D36', '#FF6B35', '#FFA500', '#2EC4B6', '#00C851'];
-    return colors[Math.min(score, 4)];
+    const colors: readonly string[] = ['#E71D36', '#FF6B35', '#FFA500', '#2EC4B6', '#00C851'];
+    return colors[Math.min(score, 4)] ?? '#E71D36';
   },
 };
 

@@ -22,6 +22,9 @@ import type {
   UpdateProfileFormData,
 } from '@/types';
 
+// Re-export form types for adapters
+export type { RegisterFormData, LoginFormData, UpdateProfileFormData };
+
 // ============================================
 // AUTH SERVICE INTERFACE
 // ============================================
@@ -44,8 +47,8 @@ export interface AuthService {
   sendEmailVerification(): Promise<void>;
 
   // User Info
-  getCurrentUser(): AuthUser | null;
-  getCurrentSession(): AuthSession | null;
+  getCurrentUser(): Promise<AuthUser | null>;
+  getCurrentSession(): Promise<AuthSession | null>;
 
   // Admin & Claims
   checkAdminStatus(): Promise<boolean>;

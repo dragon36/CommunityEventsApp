@@ -20,6 +20,8 @@ import {
   initializeFirestore,
   persistentLocalCache,
   persistentMultipleTabManager,
+  collection,
+  addDoc,
 } from 'firebase/firestore';
 import {
   getStorage,
@@ -57,13 +59,13 @@ let auth: Auth;
 let db: Firestore;
 let storage: FirebaseStorage;
 let functions: Functions;
-let analytics: Analytics | null = null;
+let analyticsInstance: Analytics | null = null;
 
 export const initializeFirebase = (): FirebaseApp => {
   if (getApps().length === 0) {
     app = initializeApp(firebaseConfig);
   } else {
-    app = getApps()[0];
+    app = getApps()[0]!;
   }
 
   // Initialize services
@@ -88,7 +90,7 @@ export const initializeFirebase = (): FirebaseApp => {
   if (Platform.OS === 'web') {
     isSupported().then((supported) => {
       if (supported) {
-        analytics = getAnalytics(app);
+        analyticsInstance = getAnalytics(app);
       }
     });
   }
@@ -132,7 +134,7 @@ export const getFunctionsInstance = (): Functions => {
 };
 
 export const getAnalyticsInstance = (): Analytics | null => {
-  return analytics;
+  return analyticsInstance;
 };
 
 // -----------------------------------------------------------------------------
@@ -158,43 +160,65 @@ export const connectEmulators = (): void => {
 // COLLECTION REFERENCES
 // -----------------------------------------------------------------------------
 export const collections = {
-  users: () => db.collection(COLLECTIONS.USERS),
-  events: () => db.collection(COLLECTIONS.EVENTS),
-  categories: () => db.collection(COLLECTIONS.CATEGORIES),
-  venues: () => db.collection(COLLECTIONS.VENUES),
-  notifications: () => db.collection(COLLECTIONS.NOTIFICATIONS),
-  reports: () => db.collection(COLLECTIONS.REPORTS),
-  analytics: () => db.collection(COLLECTIONS.ANALYTICS),
-  searchIndex: () => db.collection(COLLECTIONS.SEARCH_INDEX),
-  dailyMetrics: () => db.collection(COLLECTIONS.DAILY_METRICS),
-  notificationPreferences: () => db.collection(COLLECTIONS.NOTIFICATION_PREFERENCES),
+  users: () => collection(db, COLLECTIONS.USERS),
+  events: () => collection(db, COLLECTIONS.EVENTS),
+  categories: () => collection(db, COLLECTIONS.CATEGORIES),
+  venues: () => collection(db, COLLECTIONS.VENUES),
+  notifications: () => collection(db, COLLECTIONS.NOTIFICATIONS),
+  reports: () => collection(db, COLLECTIONS.REPORTS),
+  analytics: () => collection(db, COLLECTIONS.ANALYTICS),
+  searchIndex: () => collection(db, COLLECTIONS.SEARCH_INDEX),
+  dailyMetrics: () => collection(db, COLLECTIONS.DAILY_METRICS),
+  notificationPreferences: () => collection(db, COLLECTIONS.NOTIFICATION_PREFERENCES),
 } as const;
 
 // -----------------------------------------------------------------------------
 // SUB-COLLECTION HELPERS
 // -----------------------------------------------------------------------------
 export const subCollections = {
-  eventAttendees: (eventId: string) => collections.events().doc(eventId).collection(COLLECTIONS.EVENT_ATTENDEES),
-  eventComments: (eventId: string) => collections.events().doc(eventId).collection(COLLECTIONS.EVENT_COMMENTS),
-  userFriends: (userId: string) => collections.users().doc(userId).collection(COLLECTIONS.FRIENDS),
-  userSavedEvents: (userId: string) => collections.users().doc(userId).collection(COLLECTIONS.SAVED_EVENTS),
+  eventAttendees: (eventId: string) => collection(db, COLLECTIONS.EVENTS, eventId, COLLECTIONS.EVENT_ATTENDEES),
+  eventComments: (eventId: string) => collection(db, COLLECTIONS.EVENTS, eventId, COLLECTIONS.EVENT_COMMENTS),
+  userFriends: (userId: string) => collection(db, COLLECTIONS.USERS, userId, COLLECTIONS.FRIENDS),
+  userSavedEvents: (userId: string) => collection(db, COLLECTIONS.USERS, userId, COLLECTIONS.SAVED_EVENTS),
 } as const;
 
 // -----------------------------------------------------------------------------
 // CALLABLE FUNCTIONS
 // -----------------------------------------------------------------------------
 export const callableFunctions = {
-  createEvent: httpsCallable<{ data: CreateEventParams }, { eventId: string }>(functions, 'createEvent'),
-  updateEvent: httpsCallable<{ eventId: string; data: Partial<CreateEventParams> }, void>(functions, 'updateEvent'),
-  deleteEvent: httpsCallable<{ eventId: string }, void>(functions, 'deleteEvent'),
-  rsvpEvent: httpsCallable<{ eventId: string; status: RSVPStatus }, void>(functions, 'rsvpEvent'),
-  sendFriendRequest: httpsCallable<{ friendId: string }, void>(functions, 'sendFriendRequest'),
-  acceptFriendRequest: httpsCallable<{ friendId: string }, void>(functions, 'acceptFriendRequest'),
-  reportContent: httpsCallable<{ targetType: string; targetId: string; reason: string }, void>(functions, 'reportContent'),
-  searchEvents: httpsCallable<SearchEventsParams, SearchEventsResult>(functions, 'searchEvents'),
-  getRecommendations: httpsCallable<{ limit?: number }, Event[]>(functions, 'getRecommendations'),
-  syncCalendar: httpsCallable<{ eventId: string }, void>(functions, 'syncCalendar'),
-  uploadImage: httpsCallable<UploadImageParams, { urls: string[] }>(functions, 'uploadImage'),
+  get createEvent() {
+    return httpsCallable<{ data: CreateEventParams }, { eventId: string }>(getFunctionsInstance(), 'createEvent');
+  },
+  get updateEvent() {
+    return httpsCallable<{ eventId: string; data: Partial<CreateEventParams> }, void>(getFunctionsInstance(), 'updateEvent');
+  },
+  get deleteEvent() {
+    return httpsCallable<{ eventId: string }, void>(getFunctionsInstance(), 'deleteEvent');
+  },
+  get rsvpEvent() {
+    return httpsCallable<{ eventId: string; status: RSVPStatus }, void>(getFunctionsInstance(), 'rsvpEvent');
+  },
+  get sendFriendRequest() {
+    return httpsCallable<{ friendId: string }, void>(getFunctionsInstance(), 'sendFriendRequest');
+  },
+  get acceptFriendRequest() {
+    return httpsCallable<{ friendId: string }, void>(getFunctionsInstance(), 'acceptFriendRequest');
+  },
+  get reportContent() {
+    return httpsCallable<{ targetType: string; targetId: string; reason: string }, void>(getFunctionsInstance(), 'reportContent');
+  },
+  get searchEvents() {
+    return httpsCallable<SearchEventsParams, SearchEventsResult>(getFunctionsInstance(), 'searchEvents');
+  },
+  get getRecommendations() {
+    return httpsCallable<{ limit?: number }, Event[]>(getFunctionsInstance(), 'getRecommendations');
+  },
+  get syncCalendar() {
+    return httpsCallable<{ eventId: string }, void>(getFunctionsInstance(), 'syncCalendar');
+  },
+  get uploadImage() {
+    return httpsCallable<UploadImageParams, { urls: string[] }>(getFunctionsInstance(), 'uploadImage');
+  },
 } as const;
 
 // -----------------------------------------------------------------------------
@@ -283,11 +307,11 @@ interface Event {
 // -----------------------------------------------------------------------------
 export const analytics = {
   logEvent: (eventName: string, parameters?: Record<string, string | number | boolean>) => {
-    if (analytics) {
-      logEvent(analytics, eventName, parameters);
+    if (analyticsInstance) {
+      logEvent(analyticsInstance, eventName, parameters);
     }
     // Also log to Firestore for server-side analytics
-    collections.analytics().add({
+    addDoc(collection(db, COLLECTIONS.ANALYTICS), {
       eventName,
       parameters: parameters || {},
       timestamp: new Date(),
@@ -337,5 +361,5 @@ export default {
   collections,
   subCollections,
   callableFunctions,
-  analytics: analytics,
+  analyticsHelpers: analytics,
 };

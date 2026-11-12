@@ -101,8 +101,8 @@ export function EventForm({
         zipCode: '',
         country: '',
       },
-      startDate: initialData?.startDate ? new Date(initialData.startDate) : editingEvent?.startDate.toDate() || new Date(Date.now() + 24 * 60 * 60 * 1000),
-      endDate: initialData?.endDate ? new Date(initialData.endDate) : editingEvent?.endDate.toDate() || new Date(Date.now() + 25 * 60 * 60 * 1000),
+      startDate: initialData?.startDate ? new Date(initialData.startDate) : editingEvent?.startDate || new Date(Date.now() + 24 * 60 * 60 * 1000),
+      endDate: initialData?.endDate ? new Date(initialData.endDate) : editingEvent?.endDate || new Date(Date.now() + 25 * 60 * 60 * 1000),
       maxAttendees: initialData?.maxAttendees || editingEvent?.maxAttendees,
       isPublic: initialData?.isPublic ?? editingEvent?.isPublic ?? true,
       tags: initialData?.tags || editingEvent?.tags || [],
@@ -213,8 +213,8 @@ export function EventForm({
         description: editingEvent.description,
         type: editingEvent.type,
         location: locationData,
-        startDate: editingEvent.startDate.toDate(),
-        endDate: editingEvent.endDate.toDate(),
+        startDate: new Date(editingEvent.startDate),
+        endDate: new Date(editingEvent.endDate),
         maxAttendees: editingEvent.maxAttendees,
         isPublic: editingEvent.isPublic,
         tags: editingEvent.tags,
@@ -473,7 +473,7 @@ export function EventForm({
           size="large"
           fullWidth
           loading={loading || isSubmitting || uploadingImages}
-          onPress={handleSubmit(onSubmitForm)}
+          onPress={() => handleSubmit(onSubmitForm)()}
         />
         <Button
           title="Cancel"

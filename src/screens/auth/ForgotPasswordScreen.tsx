@@ -19,11 +19,13 @@ import { useForm } from '@/hooks';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@/navigation/types';
+import type { RootStackParamList } from '@/navigation/types';
 import { REGEX } from '@/constants';
 
 export const ForgotPasswordScreen = () => {
   const { resetPassword, loading: authLoading } = useAuth();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, keyof RootStackParamList>>();
   const { colors, spacing, typography } = useTheme();
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -162,7 +164,7 @@ export const ForgotPasswordScreen = () => {
           <View style={styles.successContainer}>
             <TouchableOpacity
               style={[styles.submitButton, { backgroundColor: colors.primary }]}
-              onPress={() => navigation.navigate('auth/login')}
+              onPress={() => navigation.navigate('auth/login', undefined)}
             >
               <Text style={styles.submitButtonText}>Back to Login</Text>
             </TouchableOpacity>

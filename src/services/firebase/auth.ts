@@ -34,8 +34,8 @@ function convertFirebaseUser(firebaseUser: FirebaseUser): AuthUser {
     emailVerified: firebaseUser.emailVerified,
     isAnonymous: firebaseUser.isAnonymous,
     metadata: {
-      creationTime: firebaseUser.metadata.creationTime,
-      lastSignInTime: firebaseUser.metadata.lastSignInTime,
+      creationTime: firebaseUser.metadata.creationTime || '',
+      lastSignInTime: firebaseUser.metadata.lastSignInTime || '',
     },
   };
 }
@@ -133,8 +133,16 @@ export const firebaseAuthAdapter: AuthService = {
       await firebaseUpdateProfile(user, updates);
     }
 
-    // Update Firestore profile
-    await userService.updateUserProfile(user.uid, data);
+    // Update Firestore profile - convert UpdateProfileFormData to Partial<UserProfile>
+    const profileUpdates: Partial<import('@/types').UserProfile> = {};
+    if (data.displayName) profileUpdates.displayName = data.displayName;
+    if (data.photoURL) profileUpdates.photoURL = data.photoURL;
+    if (data.bio !== undefined) profileUpdates.bio = data.bio;
+    if (data.location) profileUpdates.location = data.location;
+    if (data.notificationSettings) profileUpdates.notificationSettings = data.notificationSettings as any;
+    if (data.privacySettings) profileUpdates.privacySettings = data.privacySettings as any;
+
+    await userService.updateUserProfile(user.uid, profileUpdates);
   },
 
   // Update email
@@ -172,13 +180,13 @@ export const firebaseAuthAdapter: AuthService = {
   },
 
   // Get current user
-  getCurrentUser(): AuthUser | null {
+  async getCurrentUser(): Promise<AuthUser | null> {
     const user = auth.currentUser;
     return user ? convertFirebaseUser(user) : null;
   },
 
   // Get current session
-  getCurrentSession(): AuthSession | null {
+  async getCurrentSession(): Promise<AuthSession | null> {
     const user = auth.currentUser;
     if (!user) return null;
     return {
@@ -197,7 +205,7 @@ export const firebaseAuthAdapter: AuthService = {
 
     try {
       const idTokenResult = await user.getIdTokenResult();
-      return idTokenResult.claims.admin === true;
+      return idTokenResult.claims['admin'] === true;
     } catch {
       return false;
     }
@@ -256,13 +264,13 @@ export const firebaseAuthAdapter: AuthService = {
   },
 
   getPasswordStrengthLabel(score: number): string {
-    const labels = ['Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
-    return labels[Math.min(score, 4)];
+    const labels: readonly string[] = ['Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
+    return labels[Math.min(score, 4)] ?? 'Very Weak';
   },
 
   getPasswordStrengthColor(score: number): string {
-    const colors = ['#E71D36', '#FF6B35', '#FFA500', '#2EC4B6', '#00C851'];
-    return colors[Math.min(score, 4)];
+    const colors: readonly string[] = ['#E71D36', '#FF6B35', '#FFA500', '#2EC4B6', '#00C851'];
+    return colors[Math.min(score, 4)] ?? '#E71D36';
   },
 };
 

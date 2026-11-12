@@ -56,7 +56,7 @@ export function EventApprovalCard({
         <View style={styles.headerInfo}>
           <Text style={styles.title}>{event.title}</Text>
           <Text style={styles.meta}>
-            By {event.creatorName} • {new Date(event.createdAt.toDate()).toLocaleDateString()}
+            By {event.creatorName} • {new Date(event.createdAt).toLocaleDateString()}
           </Text>
         </View>
         <TouchableOpacity onPress={onViewDetails} style={styles.detailsButton}>
@@ -75,7 +75,7 @@ export function EventApprovalCard({
         <View style={styles.infoRow}>
           <Ionicons name="calendar-outline" as any size={16} color="#999999" />
           <Text style={styles.infoText}>
-            {formatDate(event.startDate.toDate())} - {formatDate(event.endDate.toDate())}
+            {formatDate(event.startDate)} - {formatDate(event.endDate)}
           </Text>
         </View>
 

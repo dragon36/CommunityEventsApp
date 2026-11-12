@@ -2,7 +2,7 @@
 // COMMUNITY EVENTS APP - UTILITY FUNCTIONS
 // =============================================================================
 
-import { GeoPoint } from '@/types';
+import type { GeoPoint } from '@/types';
 
 // -----------------------------------------------------------------------------
 // DATE UTILITIES
@@ -133,7 +133,10 @@ export const generateId = (): string => {
 };
 
 export const maskEmail = (email: string): string => {
-  const [local, domain] = email.split('@');
+  const parts = email.split('@');
+  const local = parts[0];
+  const domain = parts[1];
+  if (!local || !domain) return email;
   if (local.length <= 2) return email;
   return `${local[0]}${'*'.repeat(local.length - 2)}${local[local.length - 1]}@${domain}`;
 };
@@ -185,9 +188,9 @@ export const calculateDistance = (
 };
 
 export const getBoundsFromCenter = (
-  center: GeoPoint,
+  center: { latitude: number; longitude: number },
   radiusMeters: number
-): { northeast: GeoPoint; southwest: GeoPoint } => {
+): { northeast: { latitude: number; longitude: number }; southwest: { latitude: number; longitude: number } } => {
   const lat = center.latitude;
   const lng = center.longitude;
   const R = 6371e3;
@@ -308,7 +311,9 @@ export const shuffle = <T>(array: T[]): T[] => {
   const result = [...array];
   for (let i = result.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
+    const temp = result[i];
+    result[i] = result[j]!;
+    result[j] = temp!;
   }
   return result;
 };
@@ -316,10 +321,10 @@ export const shuffle = <T>(array: T[]): T[] => {
 // -----------------------------------------------------------------------------
 // OBJECT UTILITIES
 // -----------------------------------------------------------------------------
-export const pick = <T extends Record<string, any>, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
-  const result = {} as Pick<T, K>;
+export const pick = <T extends Record<string, any>, K extends keyof T>(obj: T, keys: K[]): Partial<Pick<T, K>> => {
+  const result = {} as Partial<Pick<T, K>>;
   keys.forEach(key => {
-    if (key in obj) result[key] = obj[key];
+    if (key in obj && obj[key] !== undefined) result[key] = obj[key];
   });
   return result;
 };
@@ -403,7 +408,7 @@ export const debounce = <T extends (...args: any[]) => any>(
   func: T,
   wait: number
 ): ((...args: Parameters<T>) => void) => {
-  let timeout: NodeJS.Timeout | null = null;
+  let timeout: ReturnType<typeof setTimeout> | null = null;
   return (...args: Parameters<T>) => {
     if (timeout) clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
@@ -429,9 +434,8 @@ export const throttle = <T extends (...args: any[]) => any>(
 // -----------------------------------------------------------------------------
 export const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result
-    ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) }
-    : null;
+  if (!result || !result[1] || !result[2] || !result[3]) return null;
+  return { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) };
 };
 
 export const rgbToHex = (r: number, g: number, b: number): string => {
@@ -441,20 +445,22 @@ export const rgbToHex = (r: number, g: number, b: number): string => {
 export const lightenColor = (hex: string, amount: number): string => {
   const rgb = hexToRgb(hex);
   if (!rgb) return hex;
+  const { r, g, b } = rgb;
   return rgbToHex(
-    Math.min(255, Math.round(rgb.r + 255 * amount)),
-    Math.min(255, Math.round(rgb.g + 255 * amount)),
-    Math.min(255, Math.round(rgb.b + 255 * amount))
+    Math.min(255, Math.round(r + 255 * amount)),
+    Math.min(255, Math.round(g + 255 * amount)),
+    Math.min(255, Math.round(b + 255 * amount))
   );
 };
 
 export const darkenColor = (hex: string, amount: number): string => {
   const rgb = hexToRgb(hex);
   if (!rgb) return hex;
+  const { r, g, b } = rgb;
   return rgbToHex(
-    Math.max(0, Math.round(rgb.r - 255 * amount)),
-    Math.max(0, Math.round(rgb.g - 255 * amount)),
-    Math.max(0, Math.round(rgb.b - 255 * amount))
+    Math.max(0, Math.round(r - 255 * amount)),
+    Math.max(0, Math.round(g - 255 * amount)),
+    Math.max(0, Math.round(b - 255 * amount))
   );
 };
 

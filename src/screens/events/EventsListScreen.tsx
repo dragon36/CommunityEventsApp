@@ -16,25 +16,28 @@ import {
 import { useTheme } from '@/context/ThemeContext';
 import { useEvents } from '@/hooks';
 import { Event } from '@/types';
-import { format, isToday, isTomorrow } from 'date-fns';
-import { COLORS } from '@/constants';
 
 // Event Card Component
 const EventCard: React.FC<{ event: Event; onPress: () => void }> = ({ event, onPress }) => {
   const { colors, spacing, typography, shadows } = useTheme();
 
   const startDate = new Date(event.startDate);
-  const isTodayEvent = isToday(startDate);
-  const isTomorrowEvent = isTomorrow(startDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const isTodayEvent = startDate >= today && startDate < tomorrow;
+  const isTomorrowEvent = startDate >= tomorrow && startDate < new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000);
 
   const getDateLabel = () => {
     if (isTodayEvent) return 'Today';
     if (isTomorrowEvent) return 'Tomorrow';
-    return format(startDate, 'EEEE, MMM d');
+    return startDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
   };
 
   const getTimeLabel = () => {
-    return format(startDate, 'h:mm a');
+    return startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
   };
 
   return (
@@ -156,11 +159,11 @@ export const EventsListScreen = () => {
         onEndReached={loadMore}
         onEndReachedThreshold={0.3}
         ListFooterComponent={
-          hasMore && (
+          hasMore ? (
             <View style={styles.loadMoreContainer}>
               <ActivityIndicator color={colors.primary} />
             </View>
-          )
+          ) : undefined
         }
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}

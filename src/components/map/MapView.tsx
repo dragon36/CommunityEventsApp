@@ -115,8 +115,8 @@ function EventCallout({ event, onPress, onClose }: EventCalloutProps) {
           <Text style={styles.calloutType}>{event.type.replace('_', ' ')}</Text>
           <Text style={styles.calloutLocation}>{event.location.venueName || event.location.address}</Text>
           <Text style={styles.calloutDate}>
-            {new Date(event.startDate.toDate()).toLocaleDateString()} -{' '}
-            {new Date(event.endDate.toDate()).toLocaleDateString()}
+            {new Date(event.startDate).toLocaleDateString()} -{' '}
+            {new Date(event.endDate).toLocaleDateString()}
           </Text>
         </View>
         <TouchableOpacity onPress={onClose} style={styles.calloutClose}>

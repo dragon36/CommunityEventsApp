@@ -103,7 +103,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   // State
   const [isOnline, setIsOnline] = useState(true);
-  const [appState, setAppState] = useState(AppState.currentState);
+  const [appState, setAppState] = useState<AppStateStatus>((AppState.currentState ?? 'active') as AppStateStatus);
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [currentUserProfile, setCurrentUserProfile] = useState<UserProfile | null>(null);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);

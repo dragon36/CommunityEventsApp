@@ -54,7 +54,7 @@ export function LocationAutocomplete({
   const [focused, setFocused] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
 
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<React.ElementRef<typeof TextInput>>(null);
   const listRef = useRef<FlatList<LocationSuggestion>>(null);
 
   // Debounced search function

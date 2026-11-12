@@ -3,6 +3,7 @@
 // =============================================================================
 
 import { supabase } from './config';
+import type { User, Session } from '@supabase/supabase-js';
 import type {
   RegisterFormData,
   LoginFormData,
@@ -15,16 +16,17 @@ import type {
 
 // Convert Supabase User to our AuthUser interface
 function convertSupabaseUser(supabaseUser: User): AuthUser {
+  const metadata = supabaseUser.user_metadata as Record<string, unknown> | undefined;
   return {
     uid: supabaseUser.id,
-    email: supabaseUser.email,
-    displayName: supabaseUser.user_metadata?.display_name || supabaseUser.user_metadata?.full_name || null,
-    photoURL: supabaseUser.user_metadata?.avatar_url || supabaseUser.user_metadata?.picture || null,
-    emailVerified: supabaseUser.email_confirmed_at !== null,
-    isAnonymous: supabaseUser.is_anonymous,
+    email: supabaseUser.email ?? null,
+    displayName: (metadata?.['display_name'] as string) || (metadata?.['full_name'] as string) || null,
+    photoURL: (metadata?.['avatar_url'] as string) || (metadata?.['picture'] as string) || null,
+    emailVerified: supabaseUser.email_confirmed_at !== null && supabaseUser.email_confirmed_at !== undefined,
+    isAnonymous: supabaseUser.is_anonymous ?? false,
     metadata: {
-      creationTime: supabaseUser.created_at,
-      lastSignInTime: supabaseUser.last_sign_in_at || supabaseUser.created_at,
+      creationTime: supabaseUser.created_at ?? new Date().toISOString(),
+      lastSignInTime: supabaseUser.last_sign_in_at ?? supabaseUser.created_at ?? new Date().toISOString(),
     },
   };
 }
@@ -179,8 +181,8 @@ export const supabaseAuthAdapter: AuthService = {
 
     // Update auth metadata
     const updates: { data: Record<string, string> } = { data: {} };
-    if (data.displayName) updates.data.display_name = data.displayName;
-    if (data.photoURL) updates.data.avatar_url = data.photoURL;
+    if (data.displayName) updates.data['display_name'] = data.displayName;
+    if (data.photoURL) updates.data['avatar_url'] = data.photoURL;
 
     if (Object.keys(updates.data).length > 0) {
       const { error } = await supabase.auth.updateUser(updates);
@@ -189,10 +191,10 @@ export const supabaseAuthAdapter: AuthService = {
 
     // Update profile in database
     const profileUpdates: Record<string, unknown> = { updated_at: new Date().toISOString() };
-    if (data.displayName) profileUpdates.display_name = data.displayName;
-    if (data.photoURL) profileUpdates.photo_url = data.photoURL;
-    if (data.bio) profileUpdates.bio = data.bio;
-    if (data.location) profileUpdates.location = data.location;
+    if (data.displayName) profileUpdates['display_name'] = data.displayName;
+    if (data.photoURL) profileUpdates['photo_url'] = data.photoURL;
+    if (data.bio) profileUpdates['bio'] = data.bio;
+    if (data.location) profileUpdates['location'] = data.location;
 
     const { error: profileError } = await supabase
       .from('profiles')
@@ -247,23 +249,23 @@ export const supabaseAuthAdapter: AuthService = {
 
   // Send email verification
   async sendEmailVerification(): Promise<void> {
+    const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.auth.resend({
       type: 'signup',
-      email: (await supabase.auth.getUser()).data.user?.email || '',
+      email: user?.email || '',
     });
     if (error) throw new Error(error.message);
   },
 
   // Get current user
-  getCurrentUser(): AuthUser | null {
-    // This is synchronous - in practice, use onAuthStateChanged or getUser()
-    const { data: { user } } = supabase.auth.getUser();
+  async getCurrentUser(): Promise<AuthUser | null> {
+    const { data: { user } } = await supabase.auth.getUser();
     return user ? convertSupabaseUser(user) : null;
   },
 
   // Get current session
-  getCurrentSession(): AuthSession | null {
-    const { data: { session } } = supabase.auth.getSession();
+  async getCurrentSession(): Promise<AuthSession | null> {
+    const { data: { session } } = await supabase.auth.getSession();
     return session ? convertSupabaseSession(session) : null;
   },
 
@@ -273,7 +275,8 @@ export const supabaseAuthAdapter: AuthService = {
     if (!session) return false;
 
     // Check JWT claims
-    if (session.user.app_metadata?.role === 'admin') {
+    const appMetadata = session.user.app_metadata as Record<string, unknown> | undefined;
+    if (appMetadata?.['role'] === 'admin') {
       return true;
     }
 
@@ -284,7 +287,7 @@ export const supabaseAuthAdapter: AuthService = {
       .eq('id', session.user.id)
       .single();
 
-    return profile?.role === 'admin';
+    return profile?.['role'] === 'admin';
   },
 
   // Refresh access token
@@ -342,13 +345,13 @@ export const supabaseAuthAdapter: AuthService = {
   },
 
   getPasswordStrengthLabel(score: number): string {
-    const labels = ['Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
-    return labels[Math.min(score, 4)];
+    const labels: readonly string[] = ['Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
+    return labels[Math.min(score, 4)] ?? 'Very Weak';
   },
 
   getPasswordStrengthColor(score: number): string {
-    const colors = ['#E71D36', '#FF6B35', '#FFA500', '#2EC4B6', '#00C851'];
-    return colors[Math.min(score, 4)];
+    const colors: readonly string[] = ['#E71D36', '#FF6B35', '#FFA500', '#2EC4B6', '#00C851'];
+    return colors[Math.min(score, 4)] ?? '#E71D36';
   },
 };
 

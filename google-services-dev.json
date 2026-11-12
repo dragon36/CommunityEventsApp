@@ -1,0 +1,35 @@
+{
+  "project_info": {
+    "project_number": "123456789",
+    "project_id": "dev-project",
+    "storage_bucket": "dev-project.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:123456789:android:dev",
+        "android_client_info": {
+          "package_name": "com.aroundtown.app.dev"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "dev-api-key"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1
+        },
+        "ads_service": {
+          "status": 1
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

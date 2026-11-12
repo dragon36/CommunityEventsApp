@@ -88,7 +88,7 @@ export function useEvents(): UseEventsReturn {
     setError(null);
     try {
       const authService = await getAuthService();
-      const user = authService.getCurrentUser();
+      const user = await authService.getCurrentUser();
       if (!user) throw new Error('Not authenticated');
 
       const dbService = await getDatabaseService();
@@ -109,7 +109,7 @@ export function useEvents(): UseEventsReturn {
     setError(null);
     try {
       const authService = await getAuthService();
-      const user = authService.getCurrentUser();
+      const user = await authService.getCurrentUser();
       if (!user) throw new Error('Not authenticated');
 
       const isAdmin = await authService.checkAdminStatus();
@@ -141,7 +141,7 @@ export function useEvents(): UseEventsReturn {
     setError(null);
     try {
       const authService = await getAuthService();
-      const user = authService.getCurrentUser();
+      const user = await authService.getCurrentUser();
       if (!user) throw new Error('Not authenticated');
 
       const isAdmin = await authService.checkAdminStatus();
@@ -285,7 +285,7 @@ export function useEvents(): UseEventsReturn {
   // Refresh all data
   const refresh = useCallback(async () => {
     const authService = await getAuthService();
-    const user = authService.getCurrentUser();
+    const user = await authService.getCurrentUser();
     if (user) {
       await fetchUserEvents(user.uid);
     }

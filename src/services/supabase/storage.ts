@@ -71,11 +71,14 @@ export async function uploadFiles(
   const results: UploadResult[] = [];
 
   for (let i = 0; i < uris.length; i++) {
+    const uri = uris[i];
+    if (!uri) continue;
+
     const fileOptions = {
       ...options,
       fileName: options.fileName ? `${options.fileName}_${i + 1}` : undefined,
     };
-    const result = await uploadFile(uris[i], fileOptions);
+    const result = await uploadFile(uri, fileOptions);
     results.push(result);
   }
 
@@ -151,9 +154,12 @@ async function uriToBlob(uri: string): Promise<Blob> {
 /**
  * Get file extension from URI
  */
-function getFileExtension(uri: string): string | null {
+function getFileExtension(uri: string): string {
   const match = uri.match(/\.([a-zA-Z0-9]+)(?:\?|$)/);
-  return match ? match[1].toLowerCase() : null;
+  if (match && match[1]) {
+    return match[1].toLowerCase();
+  }
+  return 'jpg';
 }
 
 /**
@@ -186,7 +192,10 @@ export async function uploadEventImages(
   const results: UploadResult[] = [];
 
   for (let i = 0; i < uris.length; i++) {
-    const result = await uploadFile(uris[i], {
+    const uri = uris[i];
+    if (!uri) continue;
+
+    const result = await uploadFile(uri, {
       folder: `events/${eventId}`,
       onProgress: onProgress ? (p) => onProgress(i, p) : undefined,
     });

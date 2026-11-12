@@ -58,14 +58,13 @@
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": false,
     "noUnusedLocals": false,
-    "noUnusedParameters": false
+    "noUnusedParameters": false,
+    "ignoreDeprecations": "6.0"
   },
   "include": [
     "src/**/*",
     "app.config.ts",
-    "expo-env.d.ts",
-    "global.d.ts",
-    ".expo/types/**/*.ts"
+    "global.d.ts"
   ],
   "exclude": [
     "node_modules",

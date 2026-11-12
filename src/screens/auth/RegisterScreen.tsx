@@ -19,11 +19,13 @@ import { useForm } from '@/hooks';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@/navigation/types';
+import type { RootStackParamList } from '@/navigation/types';
 import { REGEX } from '@/constants';
 
 export const RegisterScreen = () => {
   const { signUp, loading: authLoading } = useAuth();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, keyof RootStackParamList>>();
   const { colors, spacing, typography } = useTheme();
   const [loading, setLoading] = useState(false);
 
@@ -53,7 +55,7 @@ export const RegisterScreen = () => {
       Alert.alert(
         'Account Created!',
         'Please check your email to verify your account.',
-        [{ text: 'OK', onPress: () => navigation.navigate('auth/login') }]
+        [{ text: 'OK', onPress: () => navigation.navigate('auth/login', undefined) }]
       );
     } catch (error: any) {
       let message = 'Registration failed. Please try again.';
@@ -81,7 +83,7 @@ export const RegisterScreen = () => {
   };
 
   const handleGoToLogin = () => {
-    navigation.navigate('auth/login');
+    navigation.navigate('auth/login', undefined);
   };
 
   return (

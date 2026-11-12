@@ -1,6 +1,6 @@
 import React, { forwardRef } from 'react';
 import { TextInput, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import type { TextInputProps, TextStyle, ViewStyle, NativeSyntheticEvent, TextInputFocusEventData } from 'react-native';
+import type { TextInputProps, TextStyle, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export interface InputProps extends Omit<TextInputProps, 'style' | 'onChangeText' | 'value' | 'onBlur' | 'onFocus'> {
@@ -18,11 +18,11 @@ export interface InputProps extends Omit<TextInputProps, 'style' | 'onChangeText
   helperStyle?: TextStyle;
   value?: string;
   onChangeText?: (text: string) => void;
-  onBlur?: (e: NativeSyntheticEvent<TextInputFocusEventData>) => void;
-  onFocus?: (e: NativeSyntheticEvent<TextInputFocusEventData>) => void;
+  onBlur?: (e: any) => void;
+  onFocus?: (e: any) => void;
 }
 
-export const Input = forwardRef<TextInput, InputProps>(
+export const Input = forwardRef<React.ElementRef<typeof TextInput>, InputProps>(
   (
     {
       label,
@@ -84,13 +84,13 @@ export const Input = forwardRef<TextInput, InputProps>(
       ...inputStyle,
     };
 
-    const handleBlur = (e: NativeSyntheticEvent<TextInputFocusEventData>) => {
+    const handleBlur = (e: any) => {
       setFocused(false);
       setTouched(true);
       onBlur?.(e);
     };
 
-    const handleFocus = (e: NativeSyntheticEvent<TextInputFocusEventData>) => {
+    const handleFocus = (e: any) => {
       setFocused(true);
       onFocus?.(e);
     };

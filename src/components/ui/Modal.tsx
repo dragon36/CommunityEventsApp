@@ -66,7 +66,7 @@ export function Modal({
   }, [visible, fadeAnim, slideAnim]);
 
   const overlayStyle: ViewStyle = {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',

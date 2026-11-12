@@ -93,6 +93,7 @@ export async function createLocationFromCoords(
     name: 'Current Location',
     address: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
     coordinates: { latitude, longitude },
+    placeId: '',
   };
 }
 
@@ -101,19 +102,22 @@ export async function createLocationFromCoords(
  */
 export function getRegionForLocations(locations: LocationData[]): MapRegion | null {
   if (locations.length === 0) return null;
+  const first = locations[0];
+  if (!first) return null;
+
   if (locations.length === 1) {
     return {
-      latitude: locations[0].coordinates.latitude,
-      longitude: locations[0].coordinates.longitude,
+      latitude: first.coordinates.latitude,
+      longitude: first.coordinates.longitude,
       latitudeDelta: 0.01,
       longitudeDelta: 0.01,
     };
   }
 
-  let minLat = locations[0].coordinates.latitude;
-  let maxLat = locations[0].coordinates.latitude;
-  let minLon = locations[0].coordinates.longitude;
-  let maxLon = locations[0].coordinates.longitude;
+  let minLat = first.coordinates.latitude;
+  let maxLat = first.coordinates.latitude;
+  let minLon = first.coordinates.longitude;
+  let maxLon = first.coordinates.longitude;
 
   for (const loc of locations) {
     minLat = Math.min(minLat, loc.coordinates.latitude);
