@@ -3,10 +3,9 @@
 // =============================================================================
 
 import React from 'react';
-import { AppNavigator } from '@/navigation/AppNavigator';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AuthProvider } from '@/context/AuthContext';
-import { ThemeProvider } from '@/context/ThemeContext';
-import { AppProvider } from '@/context/AppContext';
+import { AppInnerContent } from '@/components/AppContent';
 
 // -----------------------------------------------------------------------------
 // ROOT COMPONENT
@@ -14,13 +13,11 @@ import { AppProvider } from '@/context/AppContext';
 
 const App = () => {
   return (
-    <AuthProvider>
-      <ThemeProvider>
-        <AppProvider>
-          <AppNavigator />
-        </AppProvider>
-      </ThemeProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppInnerContent />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 };
 

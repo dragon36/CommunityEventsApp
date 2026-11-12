@@ -12,28 +12,62 @@ const supabaseConfig = extra?.['supabase'] as Record<string, string> | undefined
 const supabaseUrl = supabaseConfig?.['url'];
 const supabaseAnonKey = supabaseConfig?.['anonKey'];
 
-// Validate config
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase config missing. Check your .env and app.config.ts');
+// Validate config - throw if missing to fail fast with clear message
+if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('your-project') || supabaseAnonKey.includes('your-supabase')) {
+  const error = new Error(
+    'Supabase configuration missing or using placeholder values.\n' +
+    'Please set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in your .env file.\n' +
+    'Get these from Supabase Dashboard > Settings > API'
+  );
+  // Store error for later retrieval
+  (globalThis as any).__SUPABASE_CONFIG_ERROR__ = error;
+  console.error('[Supabase] Configuration Error:', error.message);
 }
 
-// Create Supabase client
-export const supabase: SupabaseClient = createClient(supabaseUrl || '', supabaseAnonKey || '', {
-  auth: {
-    // Use AsyncStorage for React Native
-    storage: Platform.OS === 'web' ? undefined : undefined, // Will use @react-native-async-storage/async-storage
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: Platform.OS === 'web',
+// Create Supabase client (only if config is valid)
+let supabaseClient: SupabaseClient | null = null;
+
+function createSupabaseClient(): SupabaseClient {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw (globalThis as any).__SUPABASE_CONFIG_ERROR__ || new Error('Supabase config not available');
+  }
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      storage: Platform.OS === 'web' ? undefined : undefined,
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: Platform.OS === 'web',
+    },
+  });
+}
+
+// Lazy getter for Supabase client
+export const getSupabaseClient = (): SupabaseClient => {
+  if (!supabaseClient) {
+    supabaseClient = createSupabaseClient();
+  }
+  return supabaseClient;
+};
+
+// Export for backward compatibility - throws if config missing
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    return getSupabaseClient()[prop as keyof SupabaseClient];
   },
 });
 
-// Export for testing
-export { supabase as default };
+// Helper to check if Supabase is configured
+export const isSupabaseConfigured = (): boolean => {
+  return !!(supabaseUrl && supabaseAnonKey && !supabaseUrl.includes('your-project') && !supabaseAnonKey.includes('your-supabase'));
+};
+
+// Get config error if any
+export const getSupabaseConfigError = (): Error | null => {
+  return (globalThis as any).__SUPABASE_CONFIG_ERROR__ || null;
+};
 
 // Helper to get current user ID
 export const getCurrentUserId = (): string | null => {
-  // This would be called from auth state listener
   return null; // Will be populated by auth state
 };
 
@@ -65,9 +99,7 @@ export const isAdminUser = async (supabaseClient: SupabaseClient, uid?: string):
 
 // Initialize Supabase (call this early in app startup)
 export const initializeSupabase = (): SupabaseClient => {
-  return supabase;
+  return getSupabaseClient();
 };
 
-export const getSupabaseClient = (): SupabaseClient => {
-  return supabase;
-};
+export { supabase as default };

@@ -1,5 +1,5 @@
 // =============================================================================
-// COMMUNITY EVENTS APP - APP CONTEXT
+// COMMUNITY EVENTS APP - APP CONTEXT (Supabase Only)
 // =============================================================================
 
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
@@ -9,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthContext';
 import { api } from '@/services/api';
 import { UserProfile, Notification } from '@/types';
-import messaging from '@react-native-firebase/messaging';
+import * as Notifications from 'expo-notifications';
 
 // -----------------------------------------------------------------------------
 // TYPES
@@ -153,10 +153,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     return () => subscription.remove();
   }, []);
 
-  // FCM token
+  // FCM/Expo Push token
   useEffect(() => {
     if (user) {
-      getFCMToken();
+      registerForPushNotifications();
     }
   }, [user]);
 
@@ -211,7 +211,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setSettings(updated);
     await saveSettings(updated);
 
-    // If user is logged in, sync to Firestore
+    // If user is logged in, sync to Supabase
     if (user) {
       try {
         await api.users.updateProfile({
@@ -253,33 +253,37 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   };
 
-  const getFCMToken = async (): Promise<string | null> => {
+  const getExpoPushToken = async (): Promise<string | null> => {
     try {
       // Request permission
-      const authStatus = await messaging().requestPermission();
-      const enabled =
-        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-
-      if (enabled) {
-        const token = await messaging().getToken();
-        setFcmToken(token);
-
-        // Save to Firestore
-        if (user) {
-          await api.users.updateProfile({ fcmToken: token } as any);
-        }
-        return token;
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
       }
+      if (finalStatus !== 'granted') {
+        console.log('Failed to get push token for push notification!');
+        return null;
+      }
+
+      const token = (await Notifications.getExpoPushTokenAsync()).data;
+      setFcmToken(token);
+
+      // Save to Supabase
+      if (user) {
+        await api.users.updateProfile({ fcmToken: token } as any);
+      }
+      return token;
     } catch (error) {
-      console.error('Failed to get FCM token:', error);
+      console.error('Failed to get Expo push token:', error);
     }
     return null;
   };
 
   const registerForPushNotifications = useCallback(async () => {
-    return getFCMToken();
-  }, []);
+    return getExpoPushToken();
+  }, [user]);
 
   const handleNotificationOpen = useCallback((notification: any) => {
     // Handle notification tap

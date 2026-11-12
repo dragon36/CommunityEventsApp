@@ -2,15 +2,90 @@
 // COMMUNITY EVENTS APP - TYPE DEFINITIONS
 // =============================================================================
 
-import type { Timestamp, GeoPoint } from 'firebase/firestore';
-
 // -----------------------------------------------------------------------------
-// BASE TYPES (using global.d.ts Firebase types)
+// BASE TYPES
 // -----------------------------------------------------------------------------
-// Timestamp, GeoPoint, DocumentReference are declared globally in global.d.ts
 
-// Re-export GeoPoint for compatibility
-export type { GeoPoint };
+/**
+ * Firestore-like Timestamp class for date handling
+ */
+export class Timestamp {
+  private readonly _seconds: number;
+  private readonly _nanoseconds: number;
+
+  constructor(seconds: number, nanoseconds: number) {
+    this._seconds = seconds;
+    this._nanoseconds = nanoseconds;
+  }
+
+  static now(): Timestamp {
+    const now = new Date();
+    return new Timestamp(Math.floor(now.getTime() / 1000), (now.getTime() % 1000) * 1_000_000);
+  }
+
+  static fromDate(date: Date): Timestamp {
+    return new Timestamp(Math.floor(date.getTime() / 1000), (date.getTime() % 1000) * 1_000_000);
+  }
+
+  static fromMillis(millis: number): Timestamp {
+    return new Timestamp(Math.floor(millis / 1000), (millis % 1000) * 1_000_000);
+  }
+
+  toDate(): Date {
+    return new Date(this._seconds * 1000 + this._nanoseconds / 1_000_000);
+  }
+
+  toMillis(): number {
+    return this._seconds * 1000 + this._nanoseconds / 1_000_000;
+  }
+
+  isEqual(other: Timestamp): boolean {
+    return this._seconds === other._seconds && this._nanoseconds === other._nanoseconds;
+  }
+
+  get seconds(): number {
+    return this._seconds;
+  }
+
+  get nanoseconds(): number {
+    return this._nanoseconds;
+  }
+}
+
+/**
+ * Firestore-like GeoPoint class for location handling
+ */
+export class GeoPoint {
+  private readonly _latitude: number;
+  private readonly _longitude: number;
+
+  constructor(latitude: number, longitude: number) {
+    if (latitude < -90 || latitude > 90) {
+      throw new Error('Latitude must be between -90 and 90');
+    }
+    if (longitude < -180 || longitude > 180) {
+      throw new Error('Longitude must be between -180 and 180');
+    }
+    this._latitude = latitude;
+    this._longitude = longitude;
+  }
+
+  get latitude(): number {
+    return this._latitude;
+  }
+
+  get longitude(): number {
+    return this._longitude;
+  }
+
+  isEqual(other: GeoPoint): boolean {
+    return this._latitude === other._latitude && this._longitude === other._longitude;
+  }
+
+  toString(): string {
+    return `GeoPoint(${this._latitude}, ${this._longitude})`;
+  }
+}
 
 // -----------------------------------------------------------------------------
 // USER TYPES

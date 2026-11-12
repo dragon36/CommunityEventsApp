@@ -199,4 +199,4 @@ export interface Services {
 }
 
 // Provider type
-export type BackendProvider = 'firebase' | 'supabase';
+export type BackendProvider = 'supabase';

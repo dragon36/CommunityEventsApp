@@ -7,6 +7,7 @@ import { initializeServices, getAuthService, getDatabaseService } from '@/servic
 import type { UserProfile } from '@/types';
 import { Alert } from 'react-native';
 import type { AuthUser, AuthSession } from '@/services/interfaces';
+import { isSupabaseConfigured, getSupabaseConfigError } from '@/services/supabase/config';
 
 // -----------------------------------------------------------------------------
 // TYPES
@@ -18,6 +19,7 @@ interface AuthContextType {
   loading: boolean;
   initializing: boolean;
   error: Error | null;
+  configError: Error | null;
   signIn: (email: string, password: string) => Promise<FactoryUserCredential>;
   signUp: (email: string, password: string, displayName: string) => Promise<FactoryUserCredential>;
   signOut: () => Promise<void>;
@@ -52,18 +54,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [initializing, setInitializing] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [configError, setConfigError] = useState<Error | null>(null);
+
+  // Check Supabase configuration early
+  useEffect(() => {
+    if (!isSupabaseConfigured()) {
+      const err = getSupabaseConfigError() || new Error('Supabase not configured');
+      setConfigError(err);
+      setInitializing(false);
+      setLoading(false);
+      return;
+    }
+  }, []);
 
   // Initialize services and listen to auth state
   useEffect(() => {
+    // Don't initialize if config is missing
+    if (configError) return;
+
     let mounted = true;
 
     const initAuth = async () => {
       try {
         await initializeServices();
-        setInitializing(false);
+        if (mounted) setInitializing(false);
       } catch (err) {
         console.error('Services init error:', err);
-        setInitializing(false);
+        if (mounted) setInitializing(false);
       }
     };
 
@@ -108,7 +125,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       mounted = false;
       if (unsubscribe) unsubscribe();
     };
-  }, []);
+  }, [configError]);
 
   // Sign in with email and password
   const signIn = async (email: string, password: string): Promise<FactoryUserCredential> => {
@@ -257,6 +274,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loading,
     initializing,
     error,
+    configError,
     signIn,
     signUp,
     signOut,

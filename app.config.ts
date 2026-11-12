@@ -26,7 +26,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   return {
     ...config,
-    name: appName,
+    name: 'aroundtown',
     slug: 'aroundtown',
     version: '1.0.0',
     orientation: 'portrait',
@@ -146,30 +146,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         }
       ],
       [
-        '@react-native-firebase/app',
-        {
-          appId: process.env['EXPO_FIREBASE_APP_ID'],
-          apiKey: process.env['EXPO_FIREBASE_API_KEY'],
-          projectId: process.env['EXPO_FIREBASE_PROJECT_ID']
-        }
-      ],
-      [
-        '@react-native-firebase/auth',
-        {
-          appleTeamId: process.env['APPLE_TEAM_ID']
-        }
-      ],
-      [
-        '@react-native-firebase/messaging',
-        {
-          ios: {
-            apnsKeyId: process.env['APNS_KEY_ID'],
-            apnsTeamId: process.env['APNS_TEAM_ID'],
-            apnsAuthKey: process.env['APNS_AUTH_KEY']
-          }
-        }
-      ],
-            [
         'expo-build-properties',
         {
           ios: {
@@ -209,17 +185,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       eas: {
         projectId: process.env['EXPO_PROJECT_ID']
       },
-      // Backend provider: 'firebase' or 'supabase'
-      backendProvider: process.env['EXPO_PUBLIC_BACKEND_PROVIDER'] || 'supabase',
-      firebase: {
-        apiKey: process.env['EXPO_FIREBASE_API_KEY'],
-        authDomain: process.env['EXPO_FIREBASE_AUTH_DOMAIN'],
-        projectId: process.env['EXPO_FIREBASE_PROJECT_ID'],
-        storageBucket: process.env['EXPO_FIREBASE_STORAGE_BUCKET'],
-        messagingSenderId: process.env['EXPO_FIREBASE_MESSAGING_SENDER_ID'],
-        appId: process.env['EXPO_FIREBASE_APP_ID'],
-        measurementId: process.env['EXPO_FIREBASE_MEASUREMENT_ID']
-      },
+      // Backend provider: 'supabase' (Firebase removed)
+      backendProvider: 'supabase',
       supabase: {
         url: process.env['EXPO_PUBLIC_SUPABASE_URL'],
         anonKey: process.env['EXPO_PUBLIC_SUPABASE_ANON_KEY']

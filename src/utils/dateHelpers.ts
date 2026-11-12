@@ -1,5 +1,5 @@
 // Date Utility Functions
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp } from '@/types';
 
 /**
  * Convert Firestore Timestamp to Date

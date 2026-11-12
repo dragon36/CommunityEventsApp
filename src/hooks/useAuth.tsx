@@ -1,10 +1,10 @@
 // =============================================================================
-// COMMUNITY EVENTS APP - AUTH HOOK (Using Factory)
+// COMMUNITY EVENTS APP - AUTH HOOK (Using Factory - Supabase Only)
 // =============================================================================
 
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
-import { User } from 'firebase/auth';
 import type { UserProfile, UserRole } from '@/types';
+import type { AuthUser, AuthSession } from '@/services/interfaces';
 import { getAuthService, getDatabaseService, initializeServices } from '@/services/factory';
 
 // ============================================
@@ -12,7 +12,7 @@ import { getAuthService, getDatabaseService, initializeServices } from '@/servic
 // ============================================
 
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
   profile: UserProfile | null;
   loading: boolean;
   error: string | null;
@@ -41,7 +41,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // ============================================
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,10 +92,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let unsubscribe: (() => void) | undefined;
 
     getAuthService().then((authService) => {
-      unsubscribe = authService.onAuthStateChanged(async (authUser) => {
-        // Convert AuthUser to Firebase User for compatibility
-        // Note: In Supabase mode, this will be different
-        setUser(authUser as User | null);
+      unsubscribe = authService.onAuthStateChanged(async (authUser, authSession) => {
+        setUser(authUser);
         if (authUser) {
           await fetchProfile(authUser.uid);
         } else {
